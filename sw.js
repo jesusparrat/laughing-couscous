@@ -1,6 +1,6 @@
 const CACHE = 'iptvplayer-v1';
 const SHELL = ['./', './index.html', './manifest.json', './playlists.json', './worker.js',
-  'https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js'];
+  ];
 
 self.addEventListener('install', e =>
   e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)).then(() => self.skipWaiting()))

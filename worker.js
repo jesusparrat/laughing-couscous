@@ -54,6 +54,7 @@ function parseM3U(text) {
       const rawGrp = (norm.match(/group-title\s*=\s*"([^"]*)"/i) || [])[1] || 'OTROS';
       cur = { name, logo, group: reclassify(name, rawGrp), qual: detectQ(name) };
     } else if (cur && line && !line.startsWith('#')) {
+      if (line === 'acestream://' || line.trim() === 'acestream://') { cur = null; continue; }
       cur.url  = line;
       cur.type = line.startsWith('acestream://') ? 'ace' : 'http';
       cur.cname = canonical(cur.name);

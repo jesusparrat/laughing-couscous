@@ -5,9 +5,9 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="theme-color" content="#6c63ff">
 <title>IPTV Player</title>
-<link rel="manifest" href="manifest.json">
+<link rel="manifest" href="./manifest.json">
 <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4fa.png">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
 <style>
 :root{--bg:#0f0f13;--sf:#1a1a24;--sf2:#22222f;--ac:#6c63ff;--ac2:#a78bfa;--tx:#e2e2f0;--mu:#7070a0;--r:12px;}
 *{box-sizing:border-box;margin:0;padding:0;}
@@ -92,7 +92,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
 .sb-play{background:#10b981;color:#fff;}
 .sb-vlc{background:#e87c00;color:#fff;}
 .sb-ace{background:#7c3aed;color:#fff;}
-.sb-web{background:var(--ac);color:#fff;}
+.sb-web{background:var(--ac);color:#fff;}.sb-cpy{background:#374151;color:#fff;}
 /* Platform hint */
 #m-hint{padding:0 18px 14px;font-size:.74rem;color:var(--mu);line-height:1.5;}
 
@@ -127,7 +127,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
   <div id="loading"><div class="spinner"></div><span id="load-msg">Cargando…</span></div>
 </header>
 
-<div id="groups"></div>
+<div id="groups"><span id="ch-count"></span></div>
 <div id="content"><div id="empty"><div class="ei">📡</div><p>Selecciona una lista o pega una URL y pulsa <strong>Cargar</strong></p></div></div>
 
 <div class="ov" id="overlay">
@@ -138,7 +138,7 @@ body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-
       <button class="mx" id="m-close">✕</button>
     </div>
     <div id="m-player">
-      <video id="m-video" controls playsinline></video>
+      <video id="m-video" controls playsinline crossorigin="anonymous"></video>
       <div id="m-video-ctrl">
         <button id="m-play">⏸</button>
         <button id="m-mute">🔊</button>
@@ -228,7 +228,7 @@ let hlsInst     = null;
 
 // ── Web Worker ───────────────────────────────────────────────────────────────
 let worker = null;
-try { worker = new Worker('worker.js'); } catch (_) {}
+try { worker = new Worker(new URL('worker.js', document.baseURI)); } catch (_) {}
 
 function parseViaWorker(text) {
   return new Promise((res, rej) => {
@@ -280,6 +280,7 @@ function parseM3USync(text) {
       const rawGrp = (norm.match(/group-title\s*=\s*"([^"]*)"/i) || [])[1] || 'OTROS';
       cur = { name, logo, group: reclassify(name, rawGrp), qual: detectQ(name) };
     } else if (cur && line && !line.startsWith('#')) {
+      if (line === 'acestream://' || line === 'acestream://undefined') { cur=null; continue; }
       cur.url=line; cur.type=line.startsWith('acestream://')?'ace':'http';
       cur.cname=canonical(cur.name); result.push(cur); cur=null;
     }
@@ -294,7 +295,9 @@ function groupChannels(raw) {
     if (!map.has(key)) map.set(key, { ...ch, logo: resolveLogo(ch.cname, ch.logo), streams: [ch] });
     else map.get(key).streams.push(ch);
   }
-  return [...map.values()];
+  const arr = [...map.values()];
+  arr.forEach((c, i) => c.idx = i);
+  return arr;
 }
 
 // ── Ordered groups ────────────────────────────────────────────────────────────
@@ -368,7 +371,7 @@ function renderContent() {
     if (isAll && slice.length === 0) break;
     rendered += slice.length;
     html += `<div class="gsec"><div class="gtitle">${g}</div><div class="grid">${
-      slice.map(ch => buildCard(ch, channels.indexOf(ch))).join('')
+      slice.map(ch => buildCard(ch, ch.idx)).join('')
     }</div></div>`;
     if (isAll && rendered >= limit) break;
   }
@@ -398,11 +401,12 @@ function openModal(i) {
     const canPlay = !isAce || true; // acestream via gateway if engine running
     const playBtn = `<button class="sb sb-play" data-action="play" data-stream="${idx}">▶ Ver</button>`;
     const vlcBtn  = `<button class="sb sb-vlc"  data-action="vlc"  data-stream="${idx}">🟠 VLC</button>`;
+    const cpyBtn  = `<button class="sb sb-cpy"  data-action="copy" data-stream="${idx}">📋</button>`;
     const aceBtn  = isAce ? `<button class="sb sb-ace" data-action="ace" data-stream="${idx}">🟣 Ace</button>` : '';
     const webBtn  = !isAce ? `<button class="sb sb-web" data-action="web" data-stream="${idx}">🌐 Web</button>` : '';
     return `<div class="sr">
       <div class="sl"><span class="bx ${qc}">${s.qual}</span> Opción ${idx+1}</div>
-      ${playBtn}${vlcBtn}${aceBtn}${webBtn}
+      ${playBtn}${vlcBtn}${aceBtn}${webBtn}${cpyBtn}
     </div>`;
   }).join('');
 
@@ -432,9 +436,10 @@ document.getElementById('m-streams').addEventListener('click', e => {
   const action  = btn.dataset.action;
 
   if (action === 'play') playInline(httpUrl, s.qual);
-  if (action === 'vlc')  launchVLC(isAce ? `acestream://${aceHash}` : httpUrl);
+  if (action === 'vlc')  launchVLC(isAce ? `acestream://${aceHash}` : httpUrl, ch.cname);
   if (action === 'ace')  launchAce(aceHash);
   if (action === 'web')  openWeb(httpUrl);
+  if (action === 'copy') copyUrl(isAce ? httpUrl : s.url);
 });
 
 // ── Inline HLS player ─────────────────────────────────────────────────────────
@@ -444,20 +449,26 @@ const pStatus   = document.getElementById('m-pstatus');
 
 function playInline(url, qual) {
   stopPlayer();
+  // Mixed content check: HTTPS page can't load HTTP streams
+  if (location.protocol === 'https:' && url.startsWith('http:')) {
+    playerDiv.style.display = 'flex';
+    pStatus.textContent = '⚠️ Stream HTTP bloqueado desde HTTPS — usa 🟠 VLC o 📋 Copiar URL';
+    return;
+  }
   playerDiv.style.display = 'flex';
   pStatus.textContent = `${qual} — conectando…`;
-
-  if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/ace/') || url.includes(':8080') || url.includes(':1935') || !url.includes('.'))) {
+  if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/ace/') || url.includes(':8080') || url.includes(':1935'))) {
     hlsInst = new Hls({ enableWorker: true, lowLatencyMode: true });
     hlsInst.loadSource(url);
     hlsInst.attachMedia(videoEl);
     hlsInst.on(Hls.Events.MANIFEST_PARSED, () => { videoEl.play(); pStatus.textContent = `${qual} — en directo`; });
     hlsInst.on(Hls.Events.ERROR, (_,d) => { if (d.fatal) pStatus.textContent = '⚠️ Error de stream'; });
-  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl') || !url.includes('.m3u8')) {
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
     videoEl.src = url;
     videoEl.play().then(()=>pStatus.textContent=`${qual} — en directo`).catch(()=>pStatus.textContent='⚠️ No se pudo reproducir');
   } else {
-    pStatus.textContent = '⚠️ Formato no soportado en este navegador';
+    videoEl.src = url;
+    videoEl.play().then(()=>pStatus.textContent=`${qual} — en directo`).catch(()=>pStatus.textContent='⚠️ No soportado — usa VLC');
   }
 }
 
@@ -482,17 +493,34 @@ document.getElementById('m-pip').addEventListener('click', () => { if(document.p
 document.getElementById('m-fs').addEventListener('click',  () => { if(videoEl.requestFullscreen) videoEl.requestFullscreen(); });
 
 // ── Launchers ─────────────────────────────────────────────────────────────────
-function launchVLC(url) {
-  // vlc:// scheme works on desktop (if registered) + Android/iOS VLC app
-  const vlcUrl = `vlc://${url}`;
-  window.location.href = vlcUrl;
-  setTimeout(() => toast('🟠 Si VLC no se abre, inicia el stream desde VLC → Abrir URL'), 800);
+function launchVLC(url, name) {
+  const ua = navigator.userAgent;
+  const isMobile = /Android|iPhone|iPad/i.test(ua);
+  if (isMobile) {
+    window.location.href = 'vlc://' + url;
+    setTimeout(() => toast('🟠 Abriendo en VLC…'), 400);
+    return;
+  }
+  // Desktop: .strm file → VLC lo abre directamente con doble clic
+  const blob = new Blob([url], { type: 'text/plain' });
+  const a = document.createElement('a');
+  const objUrl = URL.createObjectURL(blob);
+  a.href = objUrl;
+  a.download = (name || 'stream') + '.strm';
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
+  toast('🟠 Archivo .strm descargado — ábrelo con doble clic en VLC');
 }
 function launchAce(hash) {
   window.location.href = `acestream://${hash}`;
   setTimeout(() => toast('🟣 Acestream: asegúrate de tener el motor instalado'), 800);
 }
 function openWeb(url) { window.open(url, '_blank'); toast('🌐 Abriendo en nueva pestaña…'); }
+function copyUrl(url) {
+  navigator.clipboard.writeText(url).then(() => toast('📋 URL copiada — pégala en VLC: Media → Abrir URL'));
+}
 
 // ── Toast ─────────────────────────────────────────────────────────────────────
 function toast(msg, ms=3200) {
@@ -510,7 +538,12 @@ async function loadM3U(url) {
   if (!url) return;
   setLoading(true, 'Descargando lista…');
   try {
-    const r = await fetch(url);
+    let r = await fetch(url).catch(() => null);
+    if (!r || !r.ok) {
+      // CORS fallback via allorigins proxy
+      const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
+      r = await fetch(proxy);
+    }
     if (!r.ok) throw new Error(`HTTP ${r.status}`);
     const text = await r.text();
     setLoading(true, 'Procesando canales…');
@@ -549,7 +582,7 @@ async function loadPlaylists() {
   const sel = document.getElementById('pl-sel');
   let lists = FALLBACK_LISTS;
   try {
-    const r = await fetch('playlists.json');
+    const r = await fetch('./playlists.json');
     if (r.ok) {
       const data = await r.json();
       lists = [{ name:'— Seleccionar lista —', description:'', url:'' }, ...data];
@@ -577,14 +610,15 @@ document.getElementById('search').addEventListener('input', e => {
   searchTimer = setTimeout(() => {
     searchQ = e.target.value.trim();
     pageOffset = 0;
-    if (searchQ && activeGroup !== 'TODOS') { activeGroup='TODOS'; renderGroups(); }
+    if (searchQ && activeGroup !== 'TODOS') { activeGroup = 'TODOS'; renderGroups(); }
+    else if (!searchQ) renderGroups();
     renderContent();
   }, 300);
 });
 
 // ── PWA Service Worker ────────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('sw.js').catch(()=>{});
+  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(()=>{});
 }
 
 // ── Init ──────────────────────────────────────────────────────────────────────
