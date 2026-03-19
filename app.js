@@ -1,29 +1,28 @@
-// app.js v3.0 - Modular, Resiliente y Optimizado
+// app.js v3.1
 'use strict';
 
-// Detección de plataforma
 const UA = navigator.userAgent;
 const IS_ANDROID = /android/i.test(UA);
 const IS_IOS = /iphone|ipad|ipod/i.test(UA);
 const IS_MOBILE = IS_ANDROID || IS_IOS;
 
-// Estado centralizado
 const state = {
   allChannels: [],
   filteredChs: [],
   activeGroup: 'TODOS',
+  activeLetter: 'TODAS', // Filtro alfabético
   pageOffset: 0,
-  pageSize: 40, // Renderizamos de 40 en 40
+  pageSize: 40,
   currentCh: null,
   currentStreamIndex: 0,
   aceAvailable: false,
   hlsInstance: null
 };
 
-// Referencias DOM
 const dom = {
   searchInput: document.getElementById('search-input'),
   groupPills: document.getElementById('group-pills'),
+  alphaPills: document.getElementById('alpha-pills'), // Nuevo
   channelList: document.getElementById('channel-list'),
   status: document.getElementById('sidebar-status'),
   scrollSentinel: document.getElementById('scroll-sentinel'),
@@ -33,7 +32,6 @@ const dom = {
   errText: document.getElementById('player-error-text')
 };
 
-// 1. VIRTUAL SCROLL (Intersection Observer)
 const observer = new IntersectionObserver((entries) => {
   if (entries[0].isIntersecting && state.pageOffset < state.filteredChs.length) {
     renderNextBatch();
@@ -44,23 +42,22 @@ function init() {
   if (!IS_MOBILE) detectAceEngine();
   if ('serviceWorker' in navigator) navigator.serviceWorker.register('./sw.js').catch(()=>{});
 
-  // Event Listeners Base
+  loadPlaylistOptions();
+
   document.getElementById('btn-load-url').addEventListener('click', loadFromInput);
   document.getElementById('btn-fullscreen').addEventListener('click', toggleFullscreen);
   document.getElementById('btn-retry').addEventListener('click', retryPlay);
   
-  // History API para el botón atrás del móvil (Fix 3)
   document.getElementById('btn-close-modal').addEventListener('click', () => closeModal(false));
   document.getElementById('modal-backdrop').addEventListener('click', (e) => {
     if(e.target.id === 'modal-backdrop') closeModal(false);
   });
   window.addEventListener('popstate', (e) => {
     if (document.getElementById('modal-backdrop').classList.contains('open')) {
-      closeModal(true); // Se cerró usando el botón atrás del móvil
+      closeModal(true);
     }
   });
 
-  // Debounce buscador
   let searchTimer;
   dom.searchInput.addEventListener('input', () => {
     clearTimeout(searchTimer);
@@ -70,12 +67,33 @@ function init() {
   observer.observe(dom.scrollSentinel);
 }
 
-// Lógica de carga
+async function loadPlaylistOptions() {
+  try {
+    const res = await fetch('./playlists.json');
+    const list = await res.json();
+    const sel = document.getElementById('playlist-select');
+    
+    list.forEach(pl => {
+      const opt = document.createElement('option');
+      opt.value = pl.url;
+      opt.textContent = pl.name;
+      sel.appendChild(opt);
+    });
+
+    sel.addEventListener('change', () => {
+      if (sel.value) {
+        document.getElementById('url-input').value = sel.value;
+        loadFromInput();
+      }
+    });
+  } catch (e) {}
+}
+
 function loadFromInput() {
   const val = document.getElementById('url-input').value.trim();
   if (!val) return;
   
-  dom.status.textContent = 'Procesando M3U (esto puede tardar unos segundos)...';
+  dom.status.textContent = 'Procesando M3U...';
   dom.channelList.innerHTML = '';
   state.allChannels = [];
   
@@ -83,45 +101,73 @@ function loadFromInput() {
     const worker = new Worker('./worker.js');
     worker.postMessage({ text });
     worker.onmessage = e => {
-      state.allChannels = e.data.channels;
-      toast(`${state.allChannels.length} canales extraídos y agrupados!`, 'ok');
+      state.allChannels = e.data.channels; // Ya vienen ordenados alfabéticamente del worker
+      toast(`${state.allChannels.length} canales agrupados!`, 'ok');
       buildGroups();
+      buildAlphabet(); // Construir abecedario
       setGroup('TODOS');
     };
   }).catch(e => toast('Error al descargar la lista M3U', 'error'));
 }
 
-// Filtros y Renderizado Pagina
 function buildGroups() {
   const counts = {};
   state.allChannels.forEach(ch => { counts[ch.group] = (counts[ch.group] || 0) + 1; });
-  const groups = Object.entries(counts).sort((a, b) => b[1] - a[1]);
+  // Ordenar grupos alfabéticamente (excepto TODOS)
+  const groups = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
   dom.groupPills.innerHTML = '';
-  dom.groupPills.appendChild(makePill('TODOS', state.allChannels.length));
-  groups.forEach(([g, c]) => dom.groupPills.appendChild(makePill(g, c)));
+  dom.groupPills.appendChild(makePill('TODOS', state.allChannels.length, 'group'));
+  groups.forEach(([g, c]) => dom.groupPills.appendChild(makePill(g, c, 'group')));
 }
 
-function makePill(label, count) {
+function buildAlphabet() {
+  dom.alphaPills.innerHTML = '';
+  dom.alphaPills.appendChild(makePill('TODAS', '', 'alpha'));
+  const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
+  letters.forEach(l => dom.alphaPills.appendChild(makePill(l, '', 'alpha')));
+}
+
+function makePill(label, count, type) {
   const p = document.createElement('button');
-  p.className = 'pill' + (label === state.activeGroup ? ' active' : '');
-  p.textContent = label + ' ' + count;
-  p.onclick = () => setGroup(label);
+  if (type === 'group') {
+    p.className = 'pill' + (label === state.activeGroup ? ' active' : '');
+    p.textContent = count ? `${label} ${count}` : label;
+    p.onclick = () => setGroup(label);
+  } else {
+    p.className = 'alpha-pill' + (label === state.activeLetter ? ' active' : '');
+    p.textContent = label;
+    p.onclick = () => setLetter(label);
+  }
   return p;
 }
 
 function setGroup(group) {
   state.activeGroup = group;
+  state.activeLetter = 'TODAS'; // Reseteamos letra al cambiar grupo
+  buildAlphabet(); // Re-render visual de letras
   document.querySelectorAll('.pill').forEach(p => 
-    p.classList.toggle('active', p.textContent.startsWith(group + ' '))
+    p.classList.toggle('active', p.textContent.startsWith(group + ' ') || p.textContent === group)
+  );
+  applyFilter();
+}
+
+function setLetter(letter) {
+  state.activeLetter = letter;
+  document.querySelectorAll('.alpha-pill').forEach(p => 
+    p.classList.toggle('active', p.textContent === letter)
   );
   applyFilter();
 }
 
 function applyFilter() {
   const q = dom.searchInput.value.trim().toLowerCase();
-  state.filteredChs = state.allChannels
-    .filter(ch => state.activeGroup === 'TODOS' || ch.group === state.activeGroup)
-    .filter(ch => !q || ch.name.toLowerCase().includes(q));
+  
+  state.filteredChs = state.allChannels.filter(ch => {
+    const matchGroup = state.activeGroup === 'TODOS' || ch.group === state.activeGroup;
+    const matchSearch = !q || ch.name.toLowerCase().includes(q);
+    const matchLetter = state.activeLetter === 'TODAS' || ch.name.toUpperCase().startsWith(state.activeLetter);
+    return matchGroup && matchSearch && matchLetter;
+  });
   
   dom.channelList.innerHTML = '';
   state.pageOffset = 0;
@@ -133,7 +179,6 @@ function renderNextBatch() {
   const slice = state.filteredChs.slice(state.pageOffset, state.pageOffset + state.pageSize);
   slice.forEach(ch => dom.channelList.appendChild(makeCard(ch)));
   state.pageOffset += state.pageSize;
-  
   dom.scrollSentinel.style.display = (state.pageOffset >= state.filteredChs.length) ? 'none' : 'block';
 }
 
@@ -161,7 +206,7 @@ function makeCard(ch) {
   return div;
 }
 
-// History API Modal Control
+// RESTAURADO EL CÓDIGO DE BOTONES VLC Y ACESTREAM
 function openModal(ch) {
   const mLogo = document.getElementById('modal-logo');
   const mLogoFb = document.getElementById('modal-logo-fb');
@@ -172,7 +217,7 @@ function openModal(ch) {
   }
 
   document.getElementById('modal-title').textContent = ch.name;
-  document.getElementById('modal-meta').textContent = `${ch.group} · ${ch.streams.length} enlaces agrupados`;
+  document.getElementById('modal-meta').textContent = `${ch.group} · ${ch.streams.length} enlaces`;
 
   const body = document.getElementById('modal-body');
   body.innerHTML = '';
@@ -180,32 +225,39 @@ function openModal(ch) {
   ch.streams.forEach((s, index) => {
     const row = document.createElement('div');
     row.className = 'stream-row';
+    
+    // Iconos según plataforma (Web, VLC, Ace)
+    let actionButtons = `<button class="btn btn-primary btn-icon" title="Ver aquí" onclick="playStream(state.allChannels[${state.allChannels.indexOf(ch)}], ${index}); closeModal();">▶</button>`;
+    
+    actionButtons += `<button class="btn btn-orange btn-icon" title="Abrir en VLC" onclick="launchVlcUrl('${s.url}', '${s.rawName}'); closeModal();">🟠</button>`;
+    
+    if (s.type === 'ace') {
+        actionButtons += `<button class="btn btn-purple btn-icon" title="Abrir en App AceStream" onclick="launchAce('${s.url}'); closeModal();">🟣</button>`;
+    }
+
     row.innerHTML = `
       <div class="stream-info">
         <strong>${s.type==='ace'?'🟣 AceStream':'🌐 HTTP'}</strong> <span class="badge badge-${s.qual.toLowerCase()}">${s.qual}</span><br>
         <small>${s.rawName}</small>
       </div>
       <div style="display:flex;gap:6px">
-        <button class="btn btn-primary btn-icon" onclick="playStream(state.allChannels[${state.allChannels.indexOf(ch)}], ${index}); closeModal();">▶</button>
-        <button class="btn btn-orange btn-icon" onclick="launchVlcUrl('${s.url}', '${s.rawName}'); closeModal();">🟠</button>
+        ${actionButtons}
       </div>
     `;
     body.appendChild(row);
   });
 
   document.getElementById('modal-backdrop').classList.add('open');
-  // Pusheamos estado para interceptar el botón atrás de Android
   history.pushState({ isModalOpen: true }, '');
 }
 
 function closeModal(fromPopState = false) {
   document.getElementById('modal-backdrop').classList.remove('open');
   if (!fromPopState && history.state && history.state.isModalOpen) {
-    history.back(); // Limpiamos el historial si se cerró con la X o clic fuera
+    history.back();
   }
 }
 
-// REPRODUCTOR & AUTO-FALLBACK (Fix 4)
 function playStream(ch, streamIndex) {
   if (!ch || !ch.streams[streamIndex]) return;
   
@@ -218,7 +270,7 @@ function playStream(ch, streamIndex) {
   updateNowPlaying(ch, stream);
 
   if (stream.type === 'ace') {
-    if (aceAvailable) {
+    if (state.aceAvailable) {
       const hash = stream.url.replace(/^acestream:\/\//i, '').replace(/\?.*$/, '');
       startHLS('http://127.0.0.1:6878/ace/getstream?id=' + encodeURIComponent(hash));
     } else {
@@ -237,7 +289,7 @@ function triggerFallback(reason) {
   } else {
     dom.playerSpinner.classList.add('hidden');
     dom.playerError.classList.remove('hidden');
-    dom.errText.textContent = reason || 'Todos los enlaces de este canal están caídos.';
+    dom.errText.textContent = reason || 'Todos los enlaces están caídos.';
   }
 }
 
@@ -252,10 +304,9 @@ function startHLS(url) {
   dom.playerSpinner.classList.remove('hidden');
   if (state.hlsInstance) { state.hlsInstance.destroy(); state.hlsInstance = null; }
   
-  const vid = getCleanVideoElement(); // Evita eventos fantasma del stream anterior
+  const vid = getCleanVideoElement();
   const isHLS = /\.m3u8(\?|$)/i.test(url) || /m3u8/i.test(url);
 
-  // Bind UI events
   vid.addEventListener('waiting', () => dom.playerSpinner.classList.remove('hidden'));
   vid.addEventListener('playing', () => dom.playerSpinner.classList.add('hidden'));
 
@@ -288,7 +339,7 @@ function startHLS(url) {
   }
 }
 
-function retryPlay() { playStream(state.currentCh, 0); } // Reintenta desde la opción 1
+function retryPlay() { playStream(state.currentCh, 0); }
 
 function launchVlcUrl(url, name) {
   if (IS_IOS) { window.location.href = 'vlc://' + url; return; }
@@ -301,6 +352,16 @@ function launchVlcUrl(url, name) {
   const a = document.createElement('a');
   a.href = 'vlc://' + url;
   document.body.appendChild(a); a.click(); document.body.removeChild(a);
+}
+
+function launchAce(url) {
+  const hash = url.replace(/^acestream:\/\//i, '').replace(/\?.*$/, '');
+  if (IS_ANDROID) {
+    window.location.href = 'acestream://' + hash;
+    toast('Abriendo App AceStream...', 'info');
+  } else {
+    window.location.href = 'acestream://' + hash;
+  }
 }
 
 async function detectAceEngine() {
@@ -321,7 +382,6 @@ function updateNowPlaying(ch, stream) {
   if(ch.logo) { lg.src=ch.logo; lg.style.display=''; fb.style.display='none'; } 
   else { lg.style.display='none'; fb.style.display='flex'; }
   
-  // Highlight card activa
   document.querySelectorAll('.ch-card').forEach(el => el.classList.remove('active'));
   const cards = dom.channelList.querySelectorAll('.ch-card');
   const index = state.filteredChs.indexOf(ch);
@@ -341,5 +401,4 @@ function toast(msg, type='info') {
   setTimeout(()=>el.remove(), 3500);
 }
 
-// Arranque
 init();

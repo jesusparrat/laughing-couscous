@@ -1,4 +1,4 @@
-// worker.js v2.3
+// worker.js v3.1
 'use strict';
 
 self.onmessage = function (e) {
@@ -21,8 +21,12 @@ const GROUP_RULES = [
   [/^(LA\s*[12]|24H|TELECINCO|CUATRO|ANTENA 3|LA SEXTA|MEGA|TELEDEPORTE)/i, 'TDT'],
 ];
 
+// Limpia TODAS las etiquetas de calidad del nombre para agrupar bien
 function canonicalName(name) {
   return name
+    // Limpia etiquetas tipo "FHD", "1080p", "4K", etc. al final del nombre
+    .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i, '')
+    // Segunda pasada por si había "Canal FHD HD"
     .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i, '')
     .replace(/\s*\(Opci[oó]n\s*\d+\)\s*$/i, '')
     .replace(/\s*Multi\s*$/i, '')
@@ -99,6 +103,9 @@ function parseM3U(text) {
     ch.badges = Array.from(qSet);
     result.push(ch);
   }
+
+  // Ordenar alfabéticamente
+  result.sort((a, b) => a.name.localeCompare(b.name));
 
   return result;
 }
