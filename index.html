@@ -1,10 +1,11 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>IPTV Player</title>
   <meta name="theme-color" content="#6c63ff">
+  <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
@@ -16,29 +17,29 @@
 <div id="app">
   <header>
     <div class="logo"><span>IPTV</span> Player</div>
-    <select id="playlist-select" title="Seleccionar lista predefinida">
-      <option value="">Seleccionar lista…</option>
+    <select id="playlist-select" title="Select Playlist">
+      <option value="">Select playlist...</option>
     </select>
     <form id="url-form" onsubmit="return false">
-      <input id="url-input" type="url" placeholder="https://ejemplo.com/lista.m3u" autocomplete="off" spellcheck="false">
-      <button class="btn btn-primary" id="btn-load-url">Cargar</button>
+      <input id="url-input" type="url" placeholder="https://example.com/list.m3u" autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary" id="btn-load-url">Load</button>
     </form>
   </header>
 
   <div id="body">
     <aside id="sidebar">
       <div id="sidebar-top">
-        <input id="search-input" type="search" placeholder="Buscar canal…" autocomplete="off">
+        <input id="search-input" type="search" placeholder="Search..." autocomplete="off">
       </div>
       <div id="group-pills"></div>
-      <div id="alpha-pills"></div> <!-- Abecedario aquí -->
+      <div id="alpha-pills"></div>
       
       <div id="channel-scroll-wrap">
         <div id="channel-list"></div>
         <div id="scroll-sentinel"></div>
       </div>
       
-      <div id="sidebar-status">Carga una lista para empezar</div>
+      <div id="sidebar-status">Load a playlist to start</div>
     </aside>
 
     <main id="main">
@@ -46,13 +47,13 @@
         <video id="video-el" controls playsinline webkit-playsinline></video>
         <div id="player-overlay">
           <div class="big-icon">📺</div>
-          <div>Selecciona un canal para reproducir</div>
+          <div>Select a channel to play</div>
         </div>
         <div id="player-spinner" class="hidden"><div class="spinner"></div></div>
         <div id="player-error" class="hidden">
           <div class="err-icon">⚠️</div>
           <div class="err-text" id="player-error-text">Stream offline</div>
-          <button class="btn btn-surface" style="margin-top:8px;" id="btn-retry">Reintentar</button>
+          <button class="btn btn-surface" style="margin-top:8px;" id="btn-retry">Retry</button>
         </div>
       </div>
 
@@ -60,22 +61,17 @@
         <img id="np-logo" src="" alt="" style="display:none">
         <div id="np-logo-fallback">📺</div>
         <div id="np-info">
-          <div id="np-name">Sin canal activo</div>
-          <div id="np-sub">Selecciona un canal</div>
+          <div id="np-name">No active channel</div>
+          <div id="np-sub">Select a channel</div>
         </div>
         <div style="display:flex;gap:6px">
           <button class="btn btn-icon btn-surface" id="btn-fullscreen">⛶</button>
         </div>
       </div>
-      
-      <div style="padding:16px; color:var(--text2); text-align:center">
-         Pulsa (⋯) en una tarjeta para ver opciones (Web, VLC, AceStream).
-      </div>
     </main>
   </div>
 </div>
 
-<!-- Modal -->
 <div id="modal-backdrop">
   <div id="modal">
     <div id="modal-header">

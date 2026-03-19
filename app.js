@@ -1,4 +1,3 @@
-// app.js v3.1
 'use strict';
 
 const UA = navigator.userAgent;
@@ -10,7 +9,7 @@ const state = {
   allChannels: [],
   filteredChs: [],
   activeGroup: 'TODOS',
-  activeLetter: 'TODAS', // Filtro alfabético
+  activeLetter: 'ALL',
   pageOffset: 0,
   pageSize: 40,
   currentCh: null,
@@ -22,7 +21,7 @@ const state = {
 const dom = {
   searchInput: document.getElementById('search-input'),
   groupPills: document.getElementById('group-pills'),
-  alphaPills: document.getElementById('alpha-pills'), // Nuevo
+  alphaPills: document.getElementById('alpha-pills'),
   channelList: document.getElementById('channel-list'),
   status: document.getElementById('sidebar-status'),
   scrollSentinel: document.getElementById('scroll-sentinel'),
@@ -93,7 +92,7 @@ function loadFromInput() {
   const val = document.getElementById('url-input').value.trim();
   if (!val) return;
   
-  dom.status.textContent = 'Procesando M3U...';
+  dom.status.textContent = 'Processing...';
   dom.channelList.innerHTML = '';
   state.allChannels = [];
   
@@ -101,19 +100,18 @@ function loadFromInput() {
     const worker = new Worker('./worker.js');
     worker.postMessage({ text });
     worker.onmessage = e => {
-      state.allChannels = e.data.channels; // Ya vienen ordenados alfabéticamente del worker
-      toast(`${state.allChannels.length} canales agrupados!`, 'ok');
+      state.allChannels = e.data.channels;
+      toast(`${state.allChannels.length} channels loaded`, 'ok');
       buildGroups();
-      buildAlphabet(); // Construir abecedario
+      buildAlphabet();
       setGroup('TODOS');
     };
-  }).catch(e => toast('Error al descargar la lista M3U', 'error'));
+  }).catch(e => toast('Error loading M3U', 'error'));
 }
 
 function buildGroups() {
   const counts = {};
   state.allChannels.forEach(ch => { counts[ch.group] = (counts[ch.group] || 0) + 1; });
-  // Ordenar grupos alfabéticamente (excepto TODOS)
   const groups = Object.entries(counts).sort((a, b) => a[0].localeCompare(b[0]));
   dom.groupPills.innerHTML = '';
   dom.groupPills.appendChild(makePill('TODOS', state.allChannels.length, 'group'));
@@ -122,7 +120,7 @@ function buildGroups() {
 
 function buildAlphabet() {
   dom.alphaPills.innerHTML = '';
-  dom.alphaPills.appendChild(makePill('TODAS', '', 'alpha'));
+  dom.alphaPills.appendChild(makePill('ALL', '', 'alpha'));
   const letters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('');
   letters.forEach(l => dom.alphaPills.appendChild(makePill(l, '', 'alpha')));
 }
@@ -143,8 +141,8 @@ function makePill(label, count, type) {
 
 function setGroup(group) {
   state.activeGroup = group;
-  state.activeLetter = 'TODAS'; // Reseteamos letra al cambiar grupo
-  buildAlphabet(); // Re-render visual de letras
+  state.activeLetter = 'ALL';
+  buildAlphabet();
   document.querySelectorAll('.pill').forEach(p => 
     p.classList.toggle('active', p.textContent.startsWith(group + ' ') || p.textContent === group)
   );
@@ -165,13 +163,13 @@ function applyFilter() {
   state.filteredChs = state.allChannels.filter(ch => {
     const matchGroup = state.activeGroup === 'TODOS' || ch.group === state.activeGroup;
     const matchSearch = !q || ch.name.toLowerCase().includes(q);
-    const matchLetter = state.activeLetter === 'TODAS' || ch.name.toUpperCase().startsWith(state.activeLetter);
+    const matchLetter = state.activeLetter === 'ALL' || ch.name.toUpperCase().startsWith(state.activeLetter);
     return matchGroup && matchSearch && matchLetter;
   });
   
   dom.channelList.innerHTML = '';
   state.pageOffset = 0;
-  dom.status.textContent = state.filteredChs.length + ' canales';
+  dom.status.textContent = state.filteredChs.length + ' channels';
   renderNextBatch();
 }
 
@@ -188,7 +186,7 @@ function makeCard(ch) {
   div.addEventListener('click', () => openModal(ch));
 
   let logoHtml = ch.logo
-    ? `<img class="ch-logo" src="${ch.logo}" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ch-logo-fallback" style="display:none">📺</div>`
+    ? `<img class="ch-logo" src="${ch.logo}" referrerpolicy="no-referrer" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'"><div class="ch-logo-fallback" style="display:none">📺</div>`
     : `<div class="ch-logo-fallback">📺</div>`;
 
   let badgesHtml = ch.badges.map(q => `<span class="badge badge-${q.toLowerCase()}">${q}</span>`).join('');
@@ -200,13 +198,12 @@ function makeCard(ch) {
       <div class="ch-meta">${badgesHtml}</div>
     </div>
     <div class="ch-options">
-      <button class="ch-btn" title="Reproducir Principal" onclick="event.stopPropagation(); playStream(state.allChannels[${state.allChannels.indexOf(ch)}], 0)">▶</button>
-      <button class="ch-btn" title="Ver Enlaces" onclick="event.stopPropagation(); openModal(state.allChannels[${state.allChannels.indexOf(ch)}])">⋯</button>
+      <button class="ch-btn" onclick="event.stopPropagation(); playStream(state.allChannels[${state.allChannels.indexOf(ch)}], 0)">▶</button>
+      <button class="ch-btn" onclick="event.stopPropagation(); openModal(state.allChannels[${state.allChannels.indexOf(ch)}])">⋯</button>
     </div>`;
   return div;
 }
 
-// RESTAURADO EL CÓDIGO DE BOTONES VLC Y ACESTREAM
 function openModal(ch) {
   const mLogo = document.getElementById('modal-logo');
   const mLogoFb = document.getElementById('modal-logo-fb');
@@ -217,7 +214,7 @@ function openModal(ch) {
   }
 
   document.getElementById('modal-title').textContent = ch.name;
-  document.getElementById('modal-meta').textContent = `${ch.group} · ${ch.streams.length} enlaces`;
+  document.getElementById('modal-meta').textContent = `${ch.group} · ${ch.streams.length} links`;
 
   const body = document.getElementById('modal-body');
   body.innerHTML = '';
@@ -226,13 +223,12 @@ function openModal(ch) {
     const row = document.createElement('div');
     row.className = 'stream-row';
     
-    // Iconos según plataforma (Web, VLC, Ace)
-    let actionButtons = `<button class="btn btn-primary btn-icon" title="Ver aquí" onclick="playStream(state.allChannels[${state.allChannels.indexOf(ch)}], ${index}); closeModal();">▶</button>`;
+    let actionButtons = `<button class="btn btn-primary btn-icon" onclick="playStream(state.allChannels[${state.allChannels.indexOf(ch)}], ${index}); closeModal();">▶</button>`;
     
-    actionButtons += `<button class="btn btn-orange btn-icon" title="Abrir en VLC" onclick="launchVlcUrl('${s.url}', '${s.rawName}'); closeModal();">🟠</button>`;
-    
-    if (s.type === 'ace') {
-        actionButtons += `<button class="btn btn-purple btn-icon" title="Abrir en App AceStream" onclick="launchAce('${s.url}'); closeModal();">🟣</button>`;
+    if (s.type === 'http') {
+        actionButtons += `<button class="btn btn-orange btn-icon" onclick="launchVlcUrl('${s.url}', '${s.rawName}'); closeModal();">🟠</button>`;
+    } else if (s.type === 'ace') {
+        actionButtons += `<button class="btn btn-purple btn-icon" onclick="launchAce('${s.url}'); closeModal();">🟣</button>`;
     }
 
     row.innerHTML = `
@@ -274,7 +270,7 @@ function playStream(ch, streamIndex) {
       const hash = stream.url.replace(/^acestream:\/\//i, '').replace(/\?.*$/, '');
       startHLS('http://127.0.0.1:6878/ace/getstream?id=' + encodeURIComponent(hash));
     } else {
-      triggerFallback('AceStream Engine no detectado en local.');
+      triggerFallback('AceStream Engine missing');
     }
     return;
   }
@@ -284,12 +280,12 @@ function playStream(ch, streamIndex) {
 function triggerFallback(reason) {
   if (state.currentCh && state.currentStreamIndex + 1 < state.currentCh.streams.length) {
     const nextIdx = state.currentStreamIndex + 1;
-    toast(`Fallo enlace. Saltando a opción ${nextIdx + 1}...`, 'warn');
+    toast(`Link failed. Trying option ${nextIdx + 1}...`, 'warn');
     playStream(state.currentCh, nextIdx);
   } else {
     dom.playerSpinner.classList.add('hidden');
     dom.playerError.classList.remove('hidden');
-    dom.errText.textContent = reason || 'Todos los enlaces están caídos.';
+    dom.errText.textContent = reason || 'All links offline';
   }
 }
 
@@ -323,9 +319,9 @@ function startHLS(url) {
     state.hlsInstance.on(Hls.Events.ERROR, (_, data) => {
       if(data.fatal) {
         if (data.type === Hls.ErrorTypes.NETWORK_ERROR || data.type === Hls.ErrorTypes.MEDIA_ERROR) {
-          triggerFallback('Error de red HLS');
+          triggerFallback('HLS network error');
         } else {
-          triggerFallback('Error de Media HLS');
+          triggerFallback('HLS media error');
         }
       }
     });
@@ -335,7 +331,7 @@ function startHLS(url) {
       dom.playerSpinner.classList.add('hidden');
       vid.play().catch(()=>{});
     }, {once:true});
-    vid.addEventListener('error', () => triggerFallback('Error de video nativo'), {once: true});
+    vid.addEventListener('error', () => triggerFallback('Native video error'), {once: true});
   }
 }
 
@@ -356,12 +352,7 @@ function launchVlcUrl(url, name) {
 
 function launchAce(url) {
   const hash = url.replace(/^acestream:\/\//i, '').replace(/\?.*$/, '');
-  if (IS_ANDROID) {
-    window.location.href = 'acestream://' + hash;
-    toast('Abriendo App AceStream...', 'info');
-  } else {
-    window.location.href = 'acestream://' + hash;
-  }
+  window.location.href = 'acestream://' + hash;
 }
 
 async function detectAceEngine() {
@@ -376,7 +367,7 @@ async function detectAceEngine() {
 function updateNowPlaying(ch, stream) {
   document.getElementById('now-playing').classList.remove('empty');
   document.getElementById('np-name').textContent = ch.name;
-  document.getElementById('np-sub').textContent = stream.qual + ' · Opc ' + (state.currentStreamIndex + 1);
+  document.getElementById('np-sub').textContent = stream.qual + ' - Opc ' + (state.currentStreamIndex + 1);
   const lg = document.getElementById('np-logo'); 
   const fb = document.getElementById('np-logo-fallback');
   if(ch.logo) { lg.src=ch.logo; lg.style.display=''; fb.style.display='none'; } 

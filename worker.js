@@ -1,4 +1,3 @@
-// worker.js v3.1
 'use strict';
 
 self.onmessage = function (e) {
@@ -18,18 +17,14 @@ const GROUP_RULES = [
   [/GOL\s*PLAY/i,                'Gol Play'],
   [/REAL\s*MADRID\s*TV/i,        'Real Madrid TV'],
   [/BAR[CÇ]A\s*TV/i,             'Barça TV'],
-  [/^(LA\s*[12]|24H|TELECINCO|CUATRO|ANTENA 3|LA SEXTA|MEGA|TELEDEPORTE)/i, 'TDT'],
+  [/^(LA\s*[12]|24H|TELECINCO|CUATRO|ANTENA 3|LA SEXTA|MEGA|TELEDEPORTE)/i, 'TDT']
 ];
 
-// Limpia TODAS las etiquetas de calidad del nombre para agrupar bien
 function canonicalName(name) {
   return name
-    // Limpia etiquetas tipo "FHD", "1080p", "4K", etc. al final del nombre
-    .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i, '')
-    // Segunda pasada por si había "Canal FHD HD"
-    .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i, '')
-    .replace(/\s*\(Opci[oó]n\s*\d+\)\s*$/i, '')
-    .replace(/\s*Multi\s*$/i, '')
+    .replace(/\s*\b(4K|UHD|FHD|1080p?|1080i|HD|720p?|SD|480p?)\b/gi, '')
+    .replace(/\s*\(\s*Opci[oó]n\s*\d+\s*\)/gi, '')
+    .replace(/\s*Multi/gi, '')
     .replace(/\s+/g, ' ')
     .trim();
 }
@@ -44,9 +39,9 @@ function classifyGroup(baseName, rawGrp) {
 
 function detectQ(n) {
   n = n.toUpperCase();
-  if (n.includes('4K')  || n.includes('UHD'))  return '4K';
+  if (n.includes('4K') || n.includes('UHD')) return '4K';
   if (n.includes('FHD') || n.includes('1080')) return 'FHD';
-  if (n.includes(' HD') || n.includes('720'))  return 'HD';
+  if (n.includes(' HD') || n.includes('720')) return 'HD';
   return 'SD';
 }
 
@@ -71,9 +66,10 @@ function parseM3U(text) {
     } else if (cur && line && !line.startsWith('#')) {
       const type = line.startsWith('acestream://') ? 'ace' : 'http';
       const cname = canonicalName(cur.rawName);
+      const mapKey = cname.toLowerCase();
 
-      if (!channelMap.has(cname)) {
-        channelMap.set(cname, {
+      if (!channelMap.has(mapKey)) {
+        channelMap.set(mapKey, {
           name: cname,
           logo: cur.logo,
           group: classifyGroup(cname, cur.rawGrp),
@@ -81,9 +77,11 @@ function parseM3U(text) {
         });
       }
 
-      if (cur.logo && !channelMap.get(cname).logo) channelMap.get(cname).logo = cur.logo;
+      if (cur.logo && !channelMap.get(mapKey).logo) {
+        channelMap.get(mapKey).logo = cur.logo;
+      }
 
-      channelMap.get(cname).streams.push({ rawName: cur.rawName, url: line, type, qual: cur.qual });
+      channelMap.get(mapKey).streams.push({ rawName: cur.rawName, url: line, type, qual: cur.qual });
       cur = null;
     }
   }
@@ -104,8 +102,6 @@ function parseM3U(text) {
     result.push(ch);
   }
 
-  // Ordenar alfabéticamente
   result.sort((a, b) => a.name.localeCompare(b.name));
-
   return result;
 }
