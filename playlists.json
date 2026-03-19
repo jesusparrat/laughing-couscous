@@ -16,8 +16,8 @@
   },
   {
     "name": "iptv-org Europa 🌍",
-    "description": "Canales públicos europeos combinados",
-    "url": "https://iptv-org.github.io/iptv/countries/de.m3u"
+    "description": "Canales públicos europeos combinados (ES+DE+FR+IT+PT)",
+    "url": "https://iptv-org.github.io/iptv/languages/spa.m3u"
   },
   {
     "name": "iptv-org Global 🌐",
