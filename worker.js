@@ -1,4 +1,4 @@
-// worker.js v2.2 - Agrupación por canal (Deduplicación)
+// worker.js v2.3
 'use strict';
 
 self.onmessage = function (e) {
@@ -6,7 +6,6 @@ self.onmessage = function (e) {
   self.postMessage({ channels: parseM3U(text) });
 };
 
-// Reglas limpias enfocadas en agrupar la familia del canal
 const GROUP_RULES = [
   [/DAZN\s*F1/i,                 'DAZN F1'],
   [/DAZN\s*(LALIGA|LA LIGA)/i,   'DAZN LaLiga'],
@@ -22,7 +21,6 @@ const GROUP_RULES = [
   [/^(LA\s*[12]|24H|TELECINCO|CUATRO|ANTENA 3|LA SEXTA|MEGA|TELEDEPORTE)/i, 'TDT'],
 ];
 
-// Limpia el nombre para agrupar todas las calidades bajo un mismo canal
 function canonicalName(name) {
   return name
     .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i, '')
@@ -50,7 +48,7 @@ function detectQ(n) {
 
 function parseM3U(text) {
   const lines = text.split(/\r?\n/);
-  const channelMap = new Map(); // Mapa para deduplicar
+  const channelMap = new Map();
   let cur = null;
 
   for (const raw of lines) {
@@ -59,8 +57,7 @@ function parseM3U(text) {
       const norm = line
         .replace(/grupo-titulo/gi, 'group-title')
         .replace(/group-title\s*=/gi, 'group-title=')
-        .replace(/tvg\s*-\s*logo/gi, 'tvg-logo')
-        .replace(/tvg\s*-\s*id/gi, 'tvg-id');
+        .replace(/tvg\s*-\s*logo/gi, 'tvg-logo');
       
       const rawName = (norm.match(/,(.+)$/) || [])[1]?.trim() || 'Canal';
       const logo = (norm.match(/tvg-logo\s*=\s*"([^"]*)"/i) || [])[1] || '';
@@ -71,39 +68,26 @@ function parseM3U(text) {
       const type = line.startsWith('acestream://') ? 'ace' : 'http';
       const cname = canonicalName(cur.rawName);
 
-      // Si el canal no existe, lo creamos
       if (!channelMap.has(cname)) {
         channelMap.set(cname, {
-          name: cname, // Ej: "DAZN F1" limpio
+          name: cname,
           logo: cur.logo,
           group: classifyGroup(cname, cur.rawGrp),
-          streams: [] // Array de enlaces para este canal
+          streams: []
         });
       }
 
-      // Si este enlace tiene logo y el canal aún no, se lo ponemos
-      if (cur.logo && !channelMap.get(cname).logo) {
-        channelMap.get(cname).logo = cur.logo;
-      }
+      if (cur.logo && !channelMap.get(cname).logo) channelMap.get(cname).logo = cur.logo;
 
-      // Metemos el enlace en la lista de streams del canal
-      channelMap.get(cname).streams.push({
-        rawName: cur.rawName,
-        url: line,
-        type: type,
-        qual: cur.qual
-      });
-
+      channelMap.get(cname).streams.push({ rawName: cur.rawName, url: line, type, qual: cur.qual });
       cur = null;
     }
   }
 
-  // Convertimos el Mapa a Array y procesamos los enlaces internos
   const result = [];
   const qScore = { '4K': 4, 'FHD': 3, 'HD': 2, 'SD': 1 };
 
   for (const ch of channelMap.values()) {
-    // Ordenamos los streams para que el mejor HTTP esté el primero
     ch.streams.sort((a, b) => {
       if (a.type !== b.type) return a.type === 'http' ? -1 : 1;
       return qScore[b.qual] - qScore[a.qual];
@@ -111,14 +95,8 @@ function parseM3U(text) {
 
     const qSet = new Set();
     ch.hasAce = false;
-    ch.streams.forEach(s => {
-      qSet.add(s.qual);
-      if (s.type === 'ace') ch.hasAce = true;
-    });
-    
-    ch.badges = Array.from(qSet); // Para renderizar todas las etiquetas en la UI
-    ch.defaultStream = ch.streams[0]; // El que se reproduce con un click rápido
-    
+    ch.streams.forEach(s => { qSet.add(s.qual); if (s.type === 'ace') ch.hasAce = true; });
+    ch.badges = Array.from(qSet);
     result.push(ch);
   }
 
