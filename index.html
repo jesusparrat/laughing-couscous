@@ -1,630 +1,1172 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<meta name="theme-color" content="#6c63ff">
-<title>IPTV Player</title>
-<link rel="manifest" href="./manifest.json">
-<link rel="apple-touch-icon" href="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4fa.png">
-<script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
-<style>
-:root{--bg:#0f0f13;--sf:#1a1a24;--sf2:#22222f;--ac:#6c63ff;--ac2:#a78bfa;--tx:#e2e2f0;--mu:#7070a0;--r:12px;}
-*{box-sizing:border-box;margin:0;padding:0;}
-body{background:var(--bg);color:var(--tx);font-family:'Segoe UI',system-ui,sans-serif;min-height:100vh;overscroll-behavior:none;}
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>📺 IPTV Player</title>
+  <link rel="manifest" href="manifest.json" />
+  <meta name="theme-color" content="#6c63ff" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+  <meta name="apple-mobile-web-app-title" content="IPTV Player" />
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4fa.png" />
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@latest/dist/hls.min.js"></script>
+  <style>
+    /* ── Reset & Variables ───────────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
 
-/* ── Header ── */
-#hd{background:var(--sf);border-bottom:1px solid #2a2a3f;padding:12px 16px;display:flex;flex-wrap:wrap;align-items:center;gap:10px;position:sticky;top:0;z-index:100;}
-#hd h1{font-size:1.15rem;font-weight:700;color:var(--ac2);flex-shrink:0;white-space:nowrap;}
-#hd h1 span{color:var(--ac);}
-#search{flex:1;min-width:140px;background:var(--sf2);border:1px solid #2a2a3f;border-radius:8px;padding:7px 12px;color:var(--tx);font-size:.88rem;outline:none;transition:border-color .2s;}
-#search:focus{border-color:var(--ac);}
-#pl-row{display:flex;gap:8px;width:100%;align-items:center;}
-#pl-sel{flex:1;background:var(--sf2);border:1px solid #2a2a3f;border-radius:8px;padding:7px 10px;color:var(--tx);font-size:.82rem;outline:none;cursor:pointer;}
-#pl-sel:focus{border-color:var(--ac);}
-#pl-sel option{background:var(--sf2);}
-#pl-url{flex:1;background:var(--sf2);border:1px solid #2a2a3f;border-radius:8px;padding:7px 12px;color:var(--tx);font-size:.82rem;outline:none;}
-#pl-url:focus{border-color:var(--ac);}
-.btn-main{background:var(--ac);color:#fff;border:none;border-radius:8px;padding:7px 15px;cursor:pointer;font-size:.85rem;font-weight:600;white-space:nowrap;transition:background .2s;}
-.btn-main:hover{background:var(--ac2);}
-#loading{display:none;font-size:.78rem;color:var(--mu);align-items:center;gap:6px;}
-#loading.on{display:flex;}
-.spinner{width:14px;height:14px;border:2px solid #2a2a3f;border-top-color:var(--ac);border-radius:50%;animation:spin .7s linear infinite;}
-@keyframes spin{to{transform:rotate(360deg);}}
+    :root {
+      --bg:        #0f0f13;
+      --surface:   #1a1a24;
+      --surface2:  #22222f;
+      --border:    #2e2e3f;
+      --accent:    #6c63ff;
+      --accent2:   #9d96ff;
+      --orange:    #f97316;
+      --purple:    #a855f7;
+      --green:     #22c55e;
+      --red:       #ef4444;
+      --text:      #e8e8f0;
+      --text2:     #8888aa;
+      --radius:    12px;
+      --radius-sm: 8px;
+      --shadow:    0 8px 32px rgba(0,0,0,.5);
+      --transition: .18s cubic-bezier(.4,0,.2,1);
+    }
 
-/* ── Groups bar ── */
-#groups{display:flex;gap:7px;padding:10px 16px;overflow-x:auto;background:var(--sf);border-bottom:1px solid #2a2a3f;scrollbar-width:thin;}
-#groups::-webkit-scrollbar{height:3px;}
-#groups::-webkit-scrollbar-thumb{background:#2a2a3f;border-radius:2px;}
-.gbtn{background:var(--sf2);border:1px solid #2a2a3f;color:var(--mu);border-radius:20px;padding:5px 14px;cursor:pointer;font-size:.8rem;white-space:nowrap;flex-shrink:0;transition:all .2s;}
-.gbtn:hover,.gbtn.active{background:var(--ac);border-color:var(--ac);color:#fff;}
-#ch-count{font-size:.75rem;color:var(--mu);margin-left:auto;flex-shrink:0;align-self:center;}
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+      font-size: 15px;
+      overflow: hidden;
+    }
 
-/* ── Grid ── */
-#content{padding:16px;}
-.gsec{margin-bottom:28px;}
-.gtitle{font-size:.85rem;font-weight:700;color:var(--ac2);margin-bottom:10px;padding-bottom:6px;border-bottom:1px solid #2a2a3f;text-transform:uppercase;letter-spacing:.06em;}
-.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:9px;}
+    /* ── Layout ─────────────────────────────────────────────────── */
+    #app { display: flex; flex-direction: column; height: 100vh; }
 
-/* ── Card ── */
-.card{background:var(--sf);border:1px solid #2a2a3f;border-radius:var(--r);overflow:hidden;cursor:pointer;transition:transform .15s,border-color .15s,box-shadow .15s;}
-.card:hover{transform:translateY(-3px);border-color:var(--ac);box-shadow:0 6px 20px rgba(108,99,255,.2);}
-.lw{background:#12121a;height:76px;display:flex;align-items:center;justify-content:center;overflow:hidden;}
-.lw img{max-height:60px;max-width:85%;object-fit:contain;}
-.nl{font-size:1.7rem;color:var(--mu);}
-.ci{padding:7px 9px;}
-.cn{font-size:.76rem;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.cm{display:flex;align-items:center;gap:4px;margin-top:4px;flex-wrap:wrap;}
-.bx{font-size:.58rem;font-weight:700;padding:2px 5px;border-radius:4px;text-transform:uppercase;}
-.b4k{background:#f59e0b;color:#000;}.bfhd{background:#10b981;color:#000;}
-.bhd{background:#3b82f6;color:#fff;}.bsd{background:#6b7280;color:#fff;}
-.bace{background:#7c3aed;color:#fff;}.bhttp{background:#0ea5e9;color:#fff;}
-.bopts{font-size:.65rem;color:var(--mu);margin-left:auto;}
+    /* Header */
+    #header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 12px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+      flex-wrap: wrap;
+    }
+    #header .logo { font-size: 1.4rem; font-weight: 700; white-space: nowrap; }
+    #header .logo span { color: var(--accent); }
 
-/* ── Load more ── */
-#more-wrap{text-align:center;padding:16px 0;}
-#more-btn{background:var(--sf2);border:1px solid #2a2a3f;color:var(--tx);border-radius:8px;padding:8px 22px;cursor:pointer;font-size:.85rem;}
-#more-btn:hover{border-color:var(--ac);}
+    #playlist-select {
+      flex: 1; min-width: 160px; max-width: 240px;
+      background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 8px 10px; font-size: .85rem; cursor: pointer;
+      appearance: none;
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238888aa' d='M1 1l5 5 5-5'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: right 10px center;
+      padding-right: 28px;
+    }
 
-/* ── Modal ── */
-.ov{display:none;position:fixed;inset:0;background:rgba(0,0,0,.8);z-index:200;align-items:center;justify-content:center;padding:12px;}
-.ov.open{display:flex;}
-.modal{background:var(--sf);border:1px solid #2a2a3f;border-radius:16px;width:100%;max-width:500px;max-height:90vh;overflow-y:auto;display:flex;flex-direction:column;}
-.mhd{display:flex;align-items:center;gap:10px;padding:16px 18px 12px;border-bottom:1px solid #2a2a3f;flex-shrink:0;}
-.mlogo{width:40px;height:40px;object-fit:contain;flex-shrink:0;}
-.mtitle{font-size:.95rem;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.mx{background:none;border:none;color:var(--mu);font-size:1.3rem;cursor:pointer;flex-shrink:0;line-height:1;padding:2px 6px;}
-.mx:hover{color:var(--tx);}
-/* Inline player */
-#m-player{width:100%;background:#000;display:none;flex-direction:column;}
-#m-video{width:100%;aspect-ratio:16/9;background:#000;}
-#m-video-ctrl{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#0a0a10;}
-#m-video-ctrl button{background:none;border:none;color:var(--tx);font-size:1rem;cursor:pointer;padding:2px 6px;border-radius:4px;}
-#m-video-ctrl button:hover{background:#2a2a3f;}
-#m-vol{width:70px;accent-color:var(--ac);}
-#m-pstatus{font-size:.72rem;color:var(--mu);margin-left:auto;}
-/* Streams list */
-#m-streams{padding:12px 18px 18px;display:flex;flex-direction:column;gap:8px;}
-.sr{background:var(--sf2);border:1px solid #2a2a3f;border-radius:9px;padding:10px 12px;display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-.sl{font-size:.78rem;color:var(--mu);flex:1;min-width:80px;display:flex;align-items:center;gap:5px;}
-.sb{border:none;border-radius:7px;padding:6px 11px;font-size:.76rem;font-weight:600;cursor:pointer;transition:opacity .2s;}
-.sb:hover{opacity:.82;}
-.sb-play{background:#10b981;color:#fff;}
-.sb-vlc{background:#e87c00;color:#fff;}
-.sb-ace{background:#7c3aed;color:#fff;}
-.sb-web{background:var(--ac);color:#fff;}.sb-cpy{background:#374151;color:#fff;}
-/* Platform hint */
-#m-hint{padding:0 18px 14px;font-size:.74rem;color:var(--mu);line-height:1.5;}
+    #url-form { display: flex; gap: 6px; flex: 2; min-width: 220px; }
+    #url-input {
+      flex: 1; background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 8px 12px; font-size: .85rem; outline: none;
+      transition: border-color var(--transition);
+    }
+    #url-input:focus { border-color: var(--accent); }
+    #url-input::placeholder { color: var(--text2); }
 
-/* ── Toast ── */
-#toast{position:fixed;bottom:14px;right:14px;background:var(--sf);border:1px solid #2a2a3f;border-radius:9px;padding:9px 14px;font-size:.8rem;color:var(--ac2);display:none;z-index:300;max-width:280px;word-break:break-word;}
+    .btn {
+      padding: 8px 16px; border: none; border-radius: var(--radius-sm);
+      font-size: .85rem; font-weight: 600; cursor: pointer;
+      transition: filter var(--transition), transform var(--transition);
+      white-space: nowrap;
+    }
+    .btn:hover  { filter: brightness(1.15); }
+    .btn:active { transform: scale(.97); }
+    .btn-primary  { background: var(--accent); color: #fff; }
+    .btn-orange   { background: var(--orange); color: #fff; }
+    .btn-purple   { background: var(--purple); color: #fff; }
+    .btn-green    { background: var(--green);  color: #fff; }
+    .btn-surface  { background: var(--surface2); color: var(--text); border: 1px solid var(--border); }
+    .btn-icon     { padding: 8px 10px; font-size: 1rem; }
 
-/* ── Empty ── */
-#empty{text-align:center;padding:60px 20px;color:var(--mu);}
-#empty .ei{font-size:2.8rem;margin-bottom:14px;}
+    /* Body split */
+    #body { display: flex; flex: 1; overflow: hidden; }
 
-/* ── Scrollbar ── */
-::-webkit-scrollbar{width:5px;height:5px;}
-::-webkit-scrollbar-thumb{background:#2a2a3f;border-radius:3px;}
+    /* ── Sidebar ─────────────────────────────────────────────────── */
+    #sidebar {
+      width: 340px; flex-shrink: 0;
+      display: flex; flex-direction: column;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      overflow: hidden;
+    }
 
-/* ── Responsive ── */
-@media(max-width:500px){
-  .grid{grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:7px;}
-  .lw{height:64px;}
-}
-</style>
+    #sidebar-top { padding: 12px; border-bottom: 1px solid var(--border); }
+
+    #search-input {
+      width: 100%; background: var(--surface2); color: var(--text);
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      padding: 9px 12px 9px 36px; font-size: .85rem; outline: none;
+      transition: border-color var(--transition);
+      background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='14' viewBox='0 0 24 24' fill='none' stroke='%238888aa' stroke-width='2'%3E%3Ccircle cx='11' cy='11' r='8'/%3E%3Cpath d='M21 21l-4.35-4.35'/%3E%3C/svg%3E");
+      background-repeat: no-repeat; background-position: 10px center;
+    }
+    #search-input:focus { border-color: var(--accent); }
+    #search-input::placeholder { color: var(--text2); }
+
+    #group-pills {
+      display: flex; gap: 6px; padding: 8px 12px;
+      overflow-x: auto; flex-shrink: 0;
+      border-bottom: 1px solid var(--border);
+      scrollbar-width: none;
+    }
+    #group-pills::-webkit-scrollbar { display: none; }
+    .pill {
+      padding: 5px 12px; border-radius: 20px; font-size: .75rem; font-weight: 600;
+      cursor: pointer; white-space: nowrap; border: 1px solid var(--border);
+      background: var(--surface2); color: var(--text2);
+      transition: all var(--transition);
+    }
+    .pill:hover  { border-color: var(--accent); color: var(--accent); }
+    .pill.active { background: var(--accent); border-color: var(--accent); color: #fff; }
+
+    #channel-list { flex: 1; overflow-y: auto; padding: 8px; }
+    #channel-list::-webkit-scrollbar { width: 4px; }
+    #channel-list::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+
+    /* Channel card */
+    .ch-card {
+      display: flex; align-items: center; gap: 10px;
+      padding: 10px 10px; border-radius: var(--radius-sm);
+      cursor: pointer; transition: background var(--transition);
+      border: 1px solid transparent;
+    }
+    .ch-card:hover  { background: var(--surface2); border-color: var(--border); }
+    .ch-card.active { background: var(--surface2); border-color: var(--accent); }
+
+    .ch-logo {
+      width: 38px; height: 38px; object-fit: contain; border-radius: 6px;
+      background: var(--surface2); flex-shrink: 0;
+    }
+    .ch-logo-fallback {
+      width: 38px; height: 38px; border-radius: 6px;
+      background: var(--surface2); flex-shrink: 0;
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem;
+    }
+    .ch-info { flex: 1; min-width: 0; }
+    .ch-name {
+      font-size: .88rem; font-weight: 600; white-space: nowrap;
+      overflow: hidden; text-overflow: ellipsis;
+    }
+    .ch-meta { display: flex; gap: 5px; margin-top: 3px; flex-wrap: wrap; }
+
+    .badge {
+      font-size: .68rem; padding: 2px 6px; border-radius: 4px;
+      font-weight: 700; text-transform: uppercase;
+    }
+    .badge-4k  { background: #7c3aed33; color: #a78bfa; }
+    .badge-fhd { background: #0369a133; color: #38bdf8; }
+    .badge-hd  { background: #15803d33; color: #4ade80; }
+    .badge-sd  { background: #44444455; color: var(--text2); }
+    .badge-ace { background: #a855f733; color: #d8b4fe; }
+    .badge-grp { background: #6c63ff22; color: var(--accent2); }
+
+    .ch-options { display: flex; gap: 4px; flex-shrink: 0; }
+    .ch-btn {
+      width: 28px; height: 28px; border: none; border-radius: 6px;
+      cursor: pointer; font-size: .75rem; display: flex; align-items: center;
+      justify-content: center; transition: filter var(--transition);
+      background: var(--surface); color: var(--text);
+    }
+    .ch-btn:hover { filter: brightness(1.3); }
+
+    /* Load more */
+    #load-more-wrap { padding: 8px; text-align: center; }
+    #load-more-btn { width: 100%; }
+
+    /* Status */
+    #sidebar-status {
+      padding: 8px 12px; font-size: .8rem; color: var(--text2);
+      border-top: 1px solid var(--border); text-align: center;
+    }
+
+    /* ── Main / Player ───────────────────────────────────────────── */
+    #main {
+      flex: 1; display: flex; flex-direction: column;
+      overflow: hidden; background: var(--bg);
+    }
+
+    #player-wrap {
+      position: relative; background: #000;
+      aspect-ratio: 16/9; max-height: 60vh;
+      flex-shrink: 0;
+    }
+    #player-wrap.theater { max-height: 80vh; }
+
+    #video-el {
+      width: 100%; height: 100%; display: block;
+      background: #000;
+    }
+
+    #player-overlay {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 12px; color: var(--text2); font-size: .9rem;
+      pointer-events: none;
+    }
+    #player-overlay .big-icon { font-size: 3rem; opacity: .3; }
+    #player-overlay.hidden { display: none; }
+
+    #player-spinner {
+      position: absolute; inset: 0;
+      display: flex; align-items: center; justify-content: center;
+      background: rgba(0,0,0,.5);
+      pointer-events: none;
+    }
+    #player-spinner.hidden { display: none; }
+    .spinner {
+      width: 40px; height: 40px;
+      border: 3px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin .8s linear infinite;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    #player-error {
+      position: absolute; inset: 0;
+      display: flex; flex-direction: column;
+      align-items: center; justify-content: center;
+      gap: 10px; background: rgba(0,0,0,.7);
+      pointer-events: none;
+    }
+    #player-error.hidden { display: none; }
+    #player-error .err-icon { font-size: 2.5rem; }
+    #player-error .err-text { font-size: .9rem; color: var(--text2); text-align: center; padding: 0 20px; }
+
+    /* Now playing bar */
+    #now-playing {
+      padding: 10px 16px;
+      background: var(--surface);
+      border-bottom: 1px solid var(--border);
+      display: flex; align-items: center; gap: 12px;
+      flex-shrink: 0;
+      min-height: 56px;
+    }
+    #now-playing.empty { opacity: .4; }
+    #np-logo { width: 32px; height: 32px; object-fit: contain; border-radius: 5px; }
+    #np-info { flex: 1; min-width: 0; }
+    #np-name { font-weight: 700; font-size: .95rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    #np-sub  { font-size: .78rem; color: var(--text2); margin-top: 2px; }
+    #np-actions { display: flex; gap: 6px; }
+
+    /* Info panel below player */
+    #info-panel { flex: 1; overflow-y: auto; padding: 16px; }
+    #info-panel::-webkit-scrollbar { width: 4px; }
+    #info-panel::-webkit-scrollbar-thumb { background: var(--border); border-radius: 4px; }
+    #info-empty {
+      display: flex; flex-direction: column; align-items: center;
+      justify-content: center; height: 100%;
+      gap: 12px; color: var(--text2); font-size: .9rem; text-align: center;
+    }
+    #info-empty .big { font-size: 3rem; }
+
+    /* ── Modal ───────────────────────────────────────────────────── */
+    #modal-backdrop {
+      position: fixed; inset: 0; background: rgba(0,0,0,.7);
+      z-index: 100; display: flex; align-items: center; justify-content: center;
+      padding: 20px;
+      opacity: 0; pointer-events: none;
+      transition: opacity var(--transition);
+    }
+    #modal-backdrop.open { opacity: 1; pointer-events: all; }
+
+    #modal {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); width: 100%; max-width: 420px;
+      box-shadow: var(--shadow);
+      transform: translateY(20px) scale(.97);
+      transition: transform var(--transition);
+    }
+    #modal-backdrop.open #modal { transform: translateY(0) scale(1); }
+
+    #modal-header {
+      display: flex; align-items: center; gap: 12px;
+      padding: 16px; border-bottom: 1px solid var(--border);
+    }
+    #modal-logo { width: 44px; height: 44px; object-fit: contain; border-radius: 8px; background: var(--surface2); }
+    #modal-title { font-weight: 700; font-size: 1rem; }
+    #modal-meta  { font-size: .8rem; color: var(--text2); margin-top: 3px; }
+    #modal-close {
+      margin-left: auto; background: none; border: none;
+      color: var(--text2); font-size: 1.3rem; cursor: pointer; padding: 4px;
+      line-height: 1; transition: color var(--transition);
+    }
+    #modal-close:hover { color: var(--text); }
+
+    #modal-body { padding: 16px; display: flex; flex-direction: column; gap: 10px; }
+
+    .modal-btn {
+      width: 100%; padding: 13px 16px;
+      border: 1px solid var(--border); border-radius: var(--radius-sm);
+      background: var(--surface2); color: var(--text);
+      cursor: pointer; font-size: .9rem; font-weight: 600;
+      display: flex; align-items: center; gap: 10px;
+      transition: all var(--transition); text-align: left;
+    }
+    .modal-btn:hover { transform: translateX(4px); border-color: var(--accent); }
+    .modal-btn .icon { font-size: 1.2rem; width: 24px; text-align: center; }
+    .modal-btn .label { flex: 1; }
+    .modal-btn .hint  { font-size: .75rem; color: var(--text2); font-weight: 400; }
+    .modal-btn.primary-btn  { border-color: var(--accent);  background: #6c63ff22; }
+    .modal-btn.primary-btn:hover { background: #6c63ff44; }
+    .modal-btn.vlc-btn    { border-color: var(--orange); background: #f9731622; }
+    .modal-btn.vlc-btn:hover { background: #f9731644; }
+    .modal-btn.ace-btn    { border-color: var(--purple); background: #a855f722; }
+    .modal-btn.ace-btn:hover { background: #a855f744; }
+    .modal-btn.web-btn    { border-color: var(--green); background: #22c55e22; }
+    .modal-btn.web-btn:hover { background: #22c55e44; }
+
+    #modal-ace-note {
+      font-size: .78rem; color: var(--text2); padding: 8px 12px;
+      background: var(--bg); border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    /* ── Toast ───────────────────────────────────────────────────── */
+    #toast-container {
+      position: fixed; bottom: 20px; right: 20px;
+      z-index: 200; display: flex; flex-direction: column; gap: 8px;
+      pointer-events: none;
+    }
+    .toast {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-sm); padding: 10px 14px;
+      font-size: .85rem; box-shadow: var(--shadow);
+      display: flex; align-items: center; gap: 8px;
+      min-width: 240px; max-width: 360px;
+      animation: slideIn .25s ease; pointer-events: all;
+    }
+    .toast.info   { border-left: 3px solid var(--accent); }
+    .toast.ok     { border-left: 3px solid var(--green); }
+    .toast.warn   { border-left: 3px solid var(--orange); }
+    .toast.error  { border-left: 3px solid var(--red); }
+    @keyframes slideIn {
+      from { opacity: 0; transform: translateX(20px); }
+      to   { opacity: 1; transform: translateX(0); }
+    }
+
+    /* ── Loading overlay ─────────────────────────────────────────── */
+    #global-loading {
+      position: fixed; inset: 0; background: var(--bg);
+      z-index: 300; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 16px;
+    }
+    #global-loading.hidden { display: none; }
+    #loading-text { color: var(--text2); font-size: .9rem; }
+    #loading-progress {
+      width: 260px; height: 4px; background: var(--surface2);
+      border-radius: 2px; overflow: hidden;
+    }
+    #loading-bar {
+      height: 100%; background: var(--accent);
+      border-radius: 2px;
+      transition: width .3s ease;
+      width: 0%;
+    }
+
+    /* ── Responsive ──────────────────────────────────────────────── */
+    @media (max-width: 768px) {
+      html, body { overflow: auto; }
+      #app { height: auto; min-height: 100vh; overflow: visible; }
+      #body { flex-direction: column; overflow: visible; }
+      #sidebar { width: 100%; border-right: none; border-bottom: 1px solid var(--border); max-height: 55vh; }
+      #main { min-height: 40vh; }
+      #player-wrap { max-height: 240px; }
+      #player-wrap.theater { max-height: 300px; }
+      #now-playing { padding: 8px 12px; }
+      #np-actions { gap: 4px; }
+      #toast-container { left: 12px; right: 12px; bottom: 12px; }
+      .toast { min-width: unset; }
+      #header { gap: 8px; }
+      #url-form { min-width: 100%; order: 10; }
+      #playlist-select { flex: 1; max-width: unset; }
+    }
+
+    @media (min-width: 1200px) {
+      #sidebar { width: 380px; }
+    }
+
+    /* TV-friendly focus styles */
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+    /* Scrollbar global */
+    * { scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+  </style>
 </head>
 <body>
 
-<header id="hd">
-  <h1>📺 <span>IPTV</span>Player</h1>
-  <input id="search" type="search" placeholder="Buscar canal…" autocomplete="off">
-  <div id="pl-row">
-    <select id="pl-sel" title="Seleccionar lista predefinida"></select>
-    <input id="pl-url" type="url" placeholder="O pega una URL de M3U…">
-    <button class="btn-main" id="load-btn">Cargar</button>
-  </div>
-  <div id="loading"><div class="spinner"></div><span id="load-msg">Cargando…</span></div>
-</header>
+<!-- Global loading -->
+<div id="global-loading">
+  <div style="font-size:2.5rem">📺</div>
+  <div id="loading-text">Iniciando…</div>
+  <div id="loading-progress"><div id="loading-bar"></div></div>
+</div>
 
-<div id="groups"><span id="ch-count"></span></div>
-<div id="content"><div id="empty"><div class="ei">📡</div><p>Selecciona una lista o pega una URL y pulsa <strong>Cargar</strong></p></div></div>
+<!-- App -->
+<div id="app">
 
-<div class="ov" id="overlay">
-  <div class="modal">
-    <div class="mhd">
-      <img class="mlogo" id="m-logo" src="" alt="">
-      <span class="mtitle" id="m-title"></span>
-      <button class="mx" id="m-close">✕</button>
-    </div>
-    <div id="m-player">
-      <video id="m-video" controls playsinline crossorigin="anonymous"></video>
-      <div id="m-video-ctrl">
-        <button id="m-play">⏸</button>
-        <button id="m-mute">🔊</button>
-        <input id="m-vol" type="range" min="0" max="1" step="0.05" value="1">
-        <span id="m-pstatus">—</span>
-        <button id="m-pip" title="Picture in Picture">⧉</button>
-        <button id="m-fs" title="Pantalla completa">⛶</button>
+  <!-- Header -->
+  <header id="header">
+    <div class="logo">📺 <span>IPTV</span> Player</div>
+
+    <select id="playlist-select" title="Seleccionar lista predefinida">
+      <option value="">— Seleccionar lista —</option>
+    </select>
+
+    <form id="url-form" onsubmit="return false">
+      <input id="url-input" type="url" placeholder="https://ejemplo.com/lista.m3u  o pega URL directa" autocomplete="off" spellcheck="false" />
+      <button class="btn btn-primary" onclick="loadFromInput()">Cargar</button>
+    </form>
+  </header>
+
+  <!-- Body -->
+  <div id="body">
+
+    <!-- Sidebar -->
+    <aside id="sidebar">
+      <div id="sidebar-top">
+        <input id="search-input" type="search" placeholder="Buscar canal…" autocomplete="off" />
       </div>
+      <div id="group-pills"></div>
+      <div id="channel-list"></div>
+      <div id="load-more-wrap" style="display:none">
+        <button class="btn btn-surface load-more-btn" id="load-more-btn" onclick="loadMore()">Cargar más</button>
+      </div>
+      <div id="sidebar-status">Carga una lista para empezar</div>
+    </aside>
+
+    <!-- Main -->
+    <main id="main">
+      <!-- Player -->
+      <div id="player-wrap">
+        <video id="video-el" controls playsinline webkit-playsinline></video>
+
+        <div id="player-overlay">
+          <div class="big-icon">📺</div>
+          <div>Selecciona un canal para reproducir</div>
+        </div>
+
+        <div id="player-spinner" class="hidden">
+          <div class="spinner"></div>
+        </div>
+
+        <div id="player-error" class="hidden">
+          <div class="err-icon">⚠️</div>
+          <div class="err-text" id="player-error-text">No se pudo reproducir el stream</div>
+          <button class="btn btn-surface" style="margin-top:8px;pointer-events:all" onclick="retryPlay()">Reintentar</button>
+        </div>
+      </div>
+
+      <!-- Now playing bar -->
+      <div id="now-playing" class="empty">
+        <img id="np-logo" src="" alt="" style="display:none" />
+        <div class="ch-logo-fallback" id="np-logo-fallback">📺</div>
+        <div id="np-info">
+          <div id="np-name">Sin canal activo</div>
+          <div id="np-sub">Selecciona un canal de la lista</div>
+        </div>
+        <div id="np-actions">
+          <button class="btn btn-icon btn-surface" title="Pantalla completa" onclick="toggleFullscreen()">⛶</button>
+          <button class="btn btn-icon btn-surface" title="Modo teatro" onclick="toggleTheater()">🎬</button>
+          <button class="btn btn-icon btn-surface" title="Silenciar" id="mute-btn" onclick="toggleMute()">🔊</button>
+        </div>
+      </div>
+
+      <!-- Info panel -->
+      <div id="info-panel">
+        <div id="info-empty">
+          <div class="big">🎯</div>
+          <div>Carga una lista y selecciona un canal<br/>El vídeo se reproduce aquí directamente</div>
+        </div>
+        <div id="info-content" style="display:none"></div>
+      </div>
+
+    </main>
+  </div><!-- /body -->
+</div><!-- /app -->
+
+<!-- Channel Modal -->
+<div id="modal-backdrop" onclick="closeModal(event)">
+  <div id="modal">
+    <div id="modal-header">
+      <img id="modal-logo" src="" alt="" />
+      <div>
+        <div id="modal-title">—</div>
+        <div id="modal-meta">—</div>
+      </div>
+      <button id="modal-close" onclick="closeModal(null)" aria-label="Cerrar">✕</button>
     </div>
-    <div id="m-streams"></div>
-    <div id="m-hint"></div>
+    <div id="modal-body">
+      <button class="modal-btn primary-btn" onclick="modalPlay('browser')">
+        <span class="icon">▶️</span>
+        <span class="label">Ver aquí</span>
+        <span class="hint">Reproductor integrado</span>
+      </button>
+      <button class="modal-btn vlc-btn" onclick="modalPlay('vlc')">
+        <span class="icon">🟠</span>
+        <span class="label">Abrir en VLC</span>
+        <span class="hint" id="vlc-hint">Requiere VLC instalado</span>
+      </button>
+      <button class="modal-btn ace-btn" id="modal-ace-btn" onclick="modalPlay('ace')">
+        <span class="icon">🔵</span>
+        <span class="label">Abrir en AceStream</span>
+        <span class="hint" id="ace-hint">Requiere AceStream instalado</span>
+      </button>
+      <button class="modal-btn web-btn" id="modal-web-btn" onclick="modalPlay('web')">
+        <span class="icon">🌐</span>
+        <span class="label">Abrir enlace externo</span>
+        <span class="hint">Nueva pestaña del navegador</span>
+      </button>
+      <div id="modal-ace-note" style="display:none"></div>
+    </div>
   </div>
 </div>
 
-<div id="toast"></div>
+<!-- Toast container -->
+<div id="toast-container"></div>
 
+<!-- ═══════════════════════════════════════════════════════════
+     JAVASCRIPT
+═══════════════════════════════════════════════════════════ -->
 <script>
-// ── Constants ────────────────────────────────────────────────────────────────
-const ACE_GW  = 'http://127.0.0.1:6878';
-const PAGE_SZ = 200; // channels per page in large groups
-const GROUP_ORDER = ['TODOS','LIGA DE CAMPEONES','DAZN','LIGA','TDT','DEPORTES','EUROSPORT','COPA DEL REY','SUPERCOPA','OTROS'];
+'use strict';
 
-// ── Logo map ─────────────────────────────────────────────────────────────────
-const LOGOS = {
-  'Liga De Campeones':  'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Liga%20De%20Campeones.png',
-  'LaLigaTV':           'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20LaLiga%20TV.png',
-  'LaLiga Hypermotion': 'https://commons.wikimedia.org/wiki/Special:FilePath/LaLiga_Hypermotion_2023_Vertical_Logo.svg',
-  'DAZN LaLiga 2':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%20LaLiga%202.png',
-  'DAZN LaLiga 3':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%20LaLiga%203.png',
-  'DAZN LaLiga 4':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%20LaLiga%204.png',
-  'DAZN LaLiga 5':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%20LaLiga%205.png',
-  'DAZN LaLiga':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%20LaLiga.png',
-  'DAZN F1':            'https://commons.wikimedia.org/wiki/Special:FilePath/Formula_1_logo.svg',
-  'DAZN 1':             'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%201.png',
-  'DAZN 2':             'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%202.png',
-  'DAZN 3':             'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%203.png',
-  'DAZN 4':             'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/DAZN%204.png',
-  'M+ Deportes 7':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%207.png',
-  'M+ Deportes 6':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%206.png',
-  'M+ Deportes 5':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%205.png',
-  'M+ Deportes 4':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%204.png',
-  'M+ Deportes 3':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%203.png',
-  'M+ Deportes 2':      'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes%202.png',
-  'M+ Deportes':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Deportes.png',
-  'M+ #Vamos':          'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20%23Vamos.png',
-  'M+ #0':              'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20%230.png',
-  'M+ Golf':            'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/M%2B%20Golf.png',
-  'Movistar +':         'https://commons.wikimedia.org/wiki/Special:FilePath/Movistar_Plus%2B_2022_logo.svg',
-  'La 1':               'https://commons.wikimedia.org/wiki/Special:FilePath/La_1_HD_TVE.png',
-  'La 2':               'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/La%202.png',
-  '24h':                'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_Canal_24_horas.svg',
-  'Telecinco':          'https://commons.wikimedia.org/wiki/Special:FilePath/Telecinco.svg',
-  'Cuatro':             'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Cuatro.png',
-  'Antena 3':           'https://commons.wikimedia.org/wiki/Special:FilePath/Logo_Antena_3_2025_(Naranja).svg',
-  'La Sexta':           'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/La%20Sexta.png',
-  'Mega':               'https://commons.wikimedia.org/wiki/Special:FilePath/MEGA.svg',
-  'Teledeporte':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Teledeporte.png',
-  'GOL PLAY':           'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Gol%20Play.png',
-  'Real Madrid TV':     'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Real%20Madrid%20TV.png',
-  'Barça TV':           'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Barca%20TV.png',
-  'Eurosport 1':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Eurosport%201.png',
-  'Eurosport 2':        'https://commons.wikimedia.org/wiki/Special:FilePath/Eurosport_2_Logo_2015.svg',
-  'Eurosport 3':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Eurosport%203.png',
-  'Eurosport 4':        'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Eurosport%204.png',
-  'Copa':               'https://raw.githubusercontent.com/davidmuma/picons_dobleM/master/icon/Copa%20del%20Rey.png',
-  'Supercopa':          'https://commons.wikimedia.org/wiki/Special:FilePath/Supercopa_de_Espana_logo.svg',
-};
+/* ── Platform detection ─────────────────────────────────────────── */
+const UA        = navigator.userAgent;
+const IS_ANDROID = /android/i.test(UA);
+const IS_IOS     = /iphone|ipad|ipod/i.test(UA);
+const IS_MOBILE  = IS_ANDROID || IS_IOS;
+const IS_TV      = /android tv|googletv|hbbtv|smarttv|webos|tizen|netcast/i.test(UA) || IS_ANDROID;
 
-function resolveLogo(name, fb) {
-  const n = name.toUpperCase();
-  for (const [k, u] of Object.entries(LOGOS)) if (k.toUpperCase() === n) return u;
-  for (const [k, u] of Object.entries(LOGOS)) if (n.includes(k.toUpperCase())) return u;
-  return fb || '';
+/* ── State ──────────────────────────────────────────────────────── */
+let allChannels   = [];
+let filteredChs   = [];
+let activeGroup   = 'TODOS';
+let currentCh     = null;
+let hlsInstance   = null;
+let pageOffset    = 0;
+const PAGE_SIZE   = 80;
+let searchTimer   = null;
+let theaterMode   = false;
+let aceAvailable  = false; // AceStream engine detected on desktop
+
+/* ── DOM refs ───────────────────────────────────────────────────── */
+const $ = id => document.getElementById(id);
+const videoEl       = $('video-el');
+const channelList   = $('channel-list');
+const groupPills    = $('group-pills');
+const statusEl      = $('sidebar-status');
+const playerOverlay = $('player-overlay');
+const playerSpinner = $('player-spinner');
+const playerError   = $('player-error');
+const playerErrorTxt= $('player-error-text');
+const modalBackdrop = $('modal-backdrop');
+const loadingEl     = $('global-loading');
+const loadingBar    = $('loading-bar');
+const loadingText   = $('loading-text');
+
+/* ── Initialise ─────────────────────────────────────────────────── */
+(async function init() {
+  setLoading(10, 'Cargando playlists…');
+  await loadPlaylistOptions();
+  setLoading(40, 'Listo');
+  setLoading(100, '');
+  setTimeout(() => loadingEl.classList.add('hidden'), 400);
+
+  // Detect AceStream engine silently (desktop only)
+  if (!IS_MOBILE) detectAceEngine();
+
+  // Service Worker (PWA)
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('./sw.js').catch(() => {});
+  }
+
+  // Keyboard shortcuts
+  document.addEventListener('keydown', onKey);
+})();
+
+function setLoading(pct, text) {
+  loadingBar.style.width = pct + '%';
+  if (text) loadingText.textContent = text;
 }
 
-function imgErr(img) {
-  const w = img.parentElement;
-  if (w) w.innerHTML = '<span class="nl">📺</span>';
+/* ── Playlists ──────────────────────────────────────────────────── */
+async function loadPlaylistOptions() {
+  try {
+    const res  = await fetch('./playlists.json');
+    const list = await res.json();
+    const sel  = $('playlist-select');
+    list.forEach((pl, i) => {
+      const opt = document.createElement('option');
+      opt.value = pl.url;
+      opt.textContent = pl.name;
+      opt.title = pl.description || '';
+      sel.appendChild(opt);
+    });
+    sel.addEventListener('change', () => {
+      if (sel.value) loadM3U(sel.value);
+    });
+  } catch(e) {
+    // playlists.json not found — that's fine
+  }
 }
 
-// ── State ────────────────────────────────────────────────────────────────────
-let channels    = [];
-let activeGroup = 'TODOS';
-let searchQ     = '';
-let pageOffset  = 0;
-let hlsInst     = null;
+function loadFromInput() {
+  const val = $('url-input').value.trim();
+  if (!val) { toast('Introduce una URL válida', 'warn'); return; }
+  loadM3U(val);
+}
 
-// ── Web Worker ───────────────────────────────────────────────────────────────
+/* ── M3U loading ────────────────────────────────────────────────── */
 let worker = null;
-try { worker = new Worker(new URL('worker.js', document.baseURI)); } catch (_) {}
+function loadM3U(url) {
+  clearChannels();
+  statusEl.textContent = 'Descargando lista…';
+  setLoadingInline(true);
 
-function parseViaWorker(text) {
-  return new Promise((res, rej) => {
-    if (!worker) {
-      // Fallback: inline parse (same logic)
-      res(parseM3USync(text));
+  // Use a CORS proxy for external URLs if needed
+  const fetchUrl = url;
+
+  fetch(fetchUrl)
+    .then(r => {
+      if (!r.ok) throw new Error(`HTTP ${r.status}`);
+      return r.text();
+    })
+    .then(text => {
+      statusEl.textContent = 'Analizando canales…';
+      parseM3UWithWorker(text);
+    })
+    .catch(err => {
+      setLoadingInline(false);
+      statusEl.textContent = 'Error al cargar lista';
+      toast('No se pudo cargar la lista: ' + err.message, 'error');
+    });
+}
+
+function parseM3UWithWorker(text) {
+  if (worker) worker.terminate();
+  worker = new Worker('./worker.js');
+  worker.postMessage({ text });
+  worker.onmessage = e => {
+    const { channels } = e.data;
+    setLoadingInline(false);
+    if (!channels || channels.length === 0) {
+      statusEl.textContent = 'La lista no contiene canales válidos';
+      toast('Lista vacía o formato no reconocido', 'warn');
       return;
     }
-    worker.onmessage = e => res(e.data.channels);
-    worker.onerror   = ()  => res(parseM3USync(text));
-    worker.postMessage({ text });
-  });
+    allChannels = channels;
+    toast(`✅ ${channels.length} canales cargados`, 'ok');
+    buildGroups();
+    setGroup('TODOS');
+  };
+  worker.onerror = () => {
+    setLoadingInline(false);
+    // Fallback: parse in main thread
+    parseM3UFallback(text);
+  };
 }
 
-// ── Inline fallback parser ────────────────────────────────────────────────────
-function detectQ(n) {
-  const u = n.toUpperCase();
-  if (u.includes('4K') || u.includes('UHD'))   return '4K';
-  if (u.includes('FHD') || u.includes('1080')) return 'FHD';
-  if (u.includes(' HD') || u.includes('720'))  return 'HD';
-  return 'SD';
-}
-function canonical(name) {
-  return name
-    .replace(/\s*(4K|UHD|FHD|1080p?|HD|720p?|SD|480p?)\s*$/i,'')
-    .replace(/\s*\(Opci[oó]n\s*\d+\)\s*$/i,'')
-    .replace(/\s*(Multi|M\d+)\s*$/i,'')
-    .trim();
-}
-const GROUP_RULES = [
-  [/^DAZN/i,'DAZN'],[/LIGA\s*DE\s*CAMPEONES|UEFA/i,'LIGA DE CAMPEONES'],
-  [/COPA\s*DEL\s*REY|^COPA\s/i,'COPA DEL REY'],[/SUPERCOPA/i,'SUPERCOPA'],
-  [/LALIGA|LALIGATV|HYPERMOTION/i,'LIGA'],[/M\+\s*(DEPORTE|DEPORTES)/i,'DEPORTES'],
-  [/EUROSPORT/i,'EUROSPORT'],
-  [/^(LA [12]|24H|TELECINCO|CUATRO|ANTENA|SEXTA|MEGA|TELEDEPORTE|GOL PLAY|REAL MADRID TV|BAR[CÇ]A TV|BARC|M\+\s*(GOLF|#|VAMOS)|TOROS|MOVISTAR)/i,'TDT'],
-];
-function reclassify(name, raw) {
-  for (const [re,g] of GROUP_RULES) if (re.test(name)) return g;
-  return raw.trim().toUpperCase() || 'OTROS';
-}
-function parseM3USync(text) {
-  const lines = text.split(/\r?\n/); const result = []; let cur = null;
+function parseM3UFallback(text) {
+  const lines = text.split(/\r?\n/);
+  const result = [];
+  let cur = null;
   for (const raw of lines) {
     const line = raw.trim();
     if (/^#EXTINF/i.test(line)) {
-      const norm = line.replace(/grupo-titulo/gi,'group-title').replace(/group-title\s*=/gi,'group-title=').replace(/tvg\s*-\s*(id|logo)/gi,m=>m.replace(/\s/g,''));
-      const name   = (norm.match(/,(.+)$/) || [])[1]?.trim() || 'Canal';
-      const logo   = (norm.match(/tvg-logo\s*=\s*"([^"]*)"/i) || [])[1] || '';
-      const rawGrp = (norm.match(/group-title\s*=\s*"([^"]*)"/i) || [])[1] || 'OTROS';
-      cur = { name, logo, group: reclassify(name, rawGrp), qual: detectQ(name) };
+      const norm = line
+        .replace(/grupo-titulo/gi, 'group-title')
+        .replace(/tvg\s*-\s*id/gi, 'tvg-id')
+        .replace(/tvg\s*-\s*logo/gi, 'tvg-logo');
+      const name    = (norm.match(/,(.+)$/) || [])[1]?.trim() || 'Canal';
+      const logo    = (norm.match(/tvg-logo\s*=\s*"([^"]*)"/i) || [])[1] || '';
+      const rawGrp  = (norm.match(/group-title\s*=\s*"([^"]*)"/i) || [])[1] || 'OTROS';
+      cur = { name, logo, group: rawGrp.trim().toUpperCase() || 'OTROS', qual: detectQuality(name) };
     } else if (cur && line && !line.startsWith('#')) {
-      if (line === 'acestream://' || line === 'acestream://undefined') { cur=null; continue; }
-      cur.url=line; cur.type=line.startsWith('acestream://')?'ace':'http';
-      cur.cname=canonical(cur.name); result.push(cur); cur=null;
+      cur.url   = line;
+      cur.type  = line.startsWith('acestream://') ? 'ace' : 'http';
+      cur.cname = cur.name;
+      result.push(cur); cur = null;
     }
   }
-  return result;
-}
-
-function groupChannels(raw) {
-  const map = new Map();
-  for (const ch of raw) {
-    const key = ch.group + '||' + ch.cname;
-    if (!map.has(key)) map.set(key, { ...ch, logo: resolveLogo(ch.cname, ch.logo), streams: [ch] });
-    else map.get(key).streams.push(ch);
-  }
-  const arr = [...map.values()];
-  arr.forEach((c, i) => c.idx = i);
-  return arr;
-}
-
-// ── Ordered groups ────────────────────────────────────────────────────────────
-function orderedGroups(chs) {
-  const present = new Set(chs.map(c=>c.group));
-  const ord = GROUP_ORDER.filter(g => g==='TODOS' || present.has(g));
-  const ext = [...present].filter(g=>!GROUP_ORDER.includes(g)).sort();
-  return [...ord, ...ext];
-}
-
-// ── Render groups bar ─────────────────────────────────────────────────────────
-function renderGroups() {
-  const bar = document.getElementById('groups');
-  const groups = orderedGroups(channels);
-  bar.innerHTML = groups.map(g=>`<button class="gbtn${g===activeGroup?' active':''}" data-g="${g}">${g}</button>`).join('');
-  const cnt = document.getElementById('ch-count');
-  if(cnt) cnt.textContent = channels.length ? `${channels.length} canales` : '';
-  bar.querySelectorAll('.gbtn').forEach(b=>b.addEventListener('click',()=>{
-    activeGroup=b.dataset.g; pageOffset=0; renderContent();
-    bar.querySelectorAll('.gbtn').forEach(x=>x.classList.toggle('active',x.dataset.g===activeGroup));
-  }));
-}
-
-// ── Build card HTML ───────────────────────────────────────────────────────────
-const QC = {'4K':'b4k','FHD':'bfhd','HD':'bhd','SD':'bsd'};
-function buildCard(ch, idx) {
-  const qc = QC[ch.qual]||'bsd';
-  const tc = ch.type==='ace'?'bace':'bhttp';
-  const tl = ch.type==='ace'?'ACE':'HTTP';
-  const opts = ch.streams.length>1 ? `<span class="bopts">${ch.streams.length} opc.</span>` : '';
-  const img = ch.logo
-    ? `<img src="${ch.logo}" alt="" loading="lazy" onerror="imgErr(this)">`
-    : '<span class="nl">📺</span>';
-  return `<div class="card" data-i="${idx}">
-    <div class="lw">${img}</div>
-    <div class="ci">
-      <div class="cn">${ch.cname}</div>
-      <div class="cm"><span class="bx ${qc}">${ch.qual}</span><span class="bx ${tc}">${tl}</span>${opts}</div>
-    </div>
-  </div>`;
-}
-
-// ── Render content ────────────────────────────────────────────────────────────
-function renderContent() {
-  const content = document.getElementById('content');
-  let list = channels;
-  if (searchQ) {
-    const s = searchQ.toLowerCase();
-    list = channels.filter(c=>c.cname.toLowerCase().includes(s)||c.group.toLowerCase().includes(s));
-  }
-  const visible = activeGroup==='TODOS' ? list : list.filter(c=>c.group===activeGroup);
-  if (!visible.length) {
-    content.innerHTML = '<div id="empty"><div class="ei">🔍</div><p>Sin resultados</p></div>';
-    return;
-  }
-
-  const secOrder = orderedGroups(visible).filter(g=>g!=='TODOS');
-  const sections = Object.fromEntries(secOrder.map(g=>[g,[]]));
-  for (const c of visible) if (sections[c.group]) sections[c.group].push(c);
-
-  // Pagination for large TODOS/search views
-  const isAll = activeGroup==='TODOS' || searchQ;
-  const limit  = isAll ? PAGE_SZ + pageOffset : Infinity;
-  let rendered = 0; let total = visible.length;
-
-  let html = '';
-  for (const g of secOrder) {
-    const items = sections[g];
-    if (!items.length) continue;
-    const slice = isAll ? items.slice(0, Math.max(0, limit - rendered)) : items;
-    if (isAll && slice.length === 0) break;
-    rendered += slice.length;
-    html += `<div class="gsec"><div class="gtitle">${g}</div><div class="grid">${
-      slice.map(ch => buildCard(ch, ch.idx)).join('')
-    }</div></div>`;
-    if (isAll && rendered >= limit) break;
-  }
-
-  const hasMore = isAll && rendered < total;
-  html += hasMore ? `<div id="more-wrap"><button id="more-btn">Cargar más (${total-rendered} restantes)</button></div>` : '';
-  content.innerHTML = html;
-  content.querySelectorAll('.card').forEach(el=>el.addEventListener('click',()=>openModal(+el.dataset.i)));
-  const mb = document.getElementById('more-btn');
-  if (mb) mb.addEventListener('click',()=>{ pageOffset+=PAGE_SZ; renderContent(); });
-}
-
-// ── Modal ─────────────────────────────────────────────────────────────────────
-function openModal(i) {
-  const ch = channels[i];
-  const logo = document.getElementById('m-logo');
-  logo.src = ch.logo || ''; logo.style.display = ch.logo ? '' : 'none';
-  logo.onerror = ()=>logo.style.display='none';
-  document.getElementById('m-title').textContent = ch.cname;
-  stopPlayer();
-
-  const streamsDiv = document.getElementById('m-streams');
-  streamsDiv.innerHTML = ch.streams.map((s,idx)=>{
-    const isAce = s.type==='ace';
-    const qc = QC[s.qual]||'bsd';
-    const httpUrl = isAce ? `${ACE_GW}/ace/getstream?id=${s.url.replace('acestream://','')}`  : s.url;
-    const canPlay = !isAce || true; // acestream via gateway if engine running
-    const playBtn = `<button class="sb sb-play" data-action="play" data-stream="${idx}">▶ Ver</button>`;
-    const vlcBtn  = `<button class="sb sb-vlc"  data-action="vlc"  data-stream="${idx}">🟠 VLC</button>`;
-    const cpyBtn  = `<button class="sb sb-cpy"  data-action="copy" data-stream="${idx}">📋</button>`;
-    const aceBtn  = isAce ? `<button class="sb sb-ace" data-action="ace" data-stream="${idx}">🟣 Ace</button>` : '';
-    const webBtn  = !isAce ? `<button class="sb sb-web" data-action="web" data-stream="${idx}">🌐 Web</button>` : '';
-    return `<div class="sr">
-      <div class="sl"><span class="bx ${qc}">${s.qual}</span> Opción ${idx+1}</div>
-      ${playBtn}${vlcBtn}${aceBtn}${webBtn}${cpyBtn}
-    </div>`;
-  }).join('');
-
-  // Store streams ref on div
-  streamsDiv.dataset.chIdx = i;
-
-  // Platform hint
-  const hasAce = ch.streams.some(s=>s.type==='ace');
-  document.getElementById('m-hint').innerHTML = hasAce
-    ? '<b>Acestream:</b> requiere AceStream Engine instalado. En Android usa la app oficial.<br><b>▶ Ver</b> usa el gateway local <code>:6878</code> si está activo.'
-    : '';
-
-  document.getElementById('overlay').classList.add('open');
-}
-
-// Stream actions via delegation
-document.getElementById('m-streams').addEventListener('click', e => {
-  const btn = e.target.closest('[data-action]');
-  if (!btn) return;
-  const chIdx   = +btn.closest('#m-streams').dataset.chIdx;
-  const sIdx    = +btn.dataset.stream;
-  const ch      = channels[chIdx];
-  const s       = ch.streams[sIdx];
-  const isAce   = s.type === 'ace';
-  const aceHash = isAce ? s.url.replace('acestream://','') : '';
-  const httpUrl = isAce ? `${ACE_GW}/ace/getstream?id=${aceHash}` : s.url;
-  const action  = btn.dataset.action;
-
-  if (action === 'play') playInline(httpUrl, s.qual);
-  if (action === 'vlc')  launchVLC(isAce ? `acestream://${aceHash}` : httpUrl, ch.cname);
-  if (action === 'ace')  launchAce(aceHash);
-  if (action === 'web')  openWeb(httpUrl);
-  if (action === 'copy') copyUrl(isAce ? httpUrl : s.url);
-});
-
-// ── Inline HLS player ─────────────────────────────────────────────────────────
-const playerDiv = document.getElementById('m-player');
-const videoEl   = document.getElementById('m-video');
-const pStatus   = document.getElementById('m-pstatus');
-
-function playInline(url, qual) {
-  stopPlayer();
-  // Mixed content check: HTTPS page can't load HTTP streams
-  if (location.protocol === 'https:' && url.startsWith('http:')) {
-    playerDiv.style.display = 'flex';
-    pStatus.textContent = '⚠️ Stream HTTP bloqueado desde HTTPS — usa 🟠 VLC o 📋 Copiar URL';
-    return;
-  }
-  playerDiv.style.display = 'flex';
-  pStatus.textContent = `${qual} — conectando…`;
-  if (Hls.isSupported() && (url.includes('.m3u8') || url.includes('/ace/') || url.includes(':8080') || url.includes(':1935'))) {
-    hlsInst = new Hls({ enableWorker: true, lowLatencyMode: true });
-    hlsInst.loadSource(url);
-    hlsInst.attachMedia(videoEl);
-    hlsInst.on(Hls.Events.MANIFEST_PARSED, () => { videoEl.play(); pStatus.textContent = `${qual} — en directo`; });
-    hlsInst.on(Hls.Events.ERROR, (_,d) => { if (d.fatal) pStatus.textContent = '⚠️ Error de stream'; });
-  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
-    videoEl.src = url;
-    videoEl.play().then(()=>pStatus.textContent=`${qual} — en directo`).catch(()=>pStatus.textContent='⚠️ No se pudo reproducir');
+  allChannels = result;
+  if (result.length) {
+    toast(`✅ ${result.length} canales cargados`, 'ok');
+    buildGroups();
+    setGroup('TODOS');
   } else {
-    videoEl.src = url;
-    videoEl.play().then(()=>pStatus.textContent=`${qual} — en directo`).catch(()=>pStatus.textContent='⚠️ No soportado — usa VLC');
+    statusEl.textContent = 'No se encontraron canales';
+    toast('Lista vacía', 'warn');
   }
 }
 
-function stopPlayer() {
-  if (hlsInst) { hlsInst.destroy(); hlsInst = null; }
-  videoEl.pause(); videoEl.src = '';
-  playerDiv.style.display = 'none';
-  pStatus.textContent = '—';
+function detectQuality(name) {
+  const n = name.toUpperCase();
+  if (n.includes('4K') || n.includes('UHD')) return '4K';
+  if (n.includes('FHD') || n.includes('1080')) return 'FHD';
+  if (n.includes(' HD') || n.includes('720')) return 'HD';
+  return 'SD';
 }
 
-// Video controls
-document.getElementById('m-play').addEventListener('click', () => {
-  if (videoEl.paused) { videoEl.play(); document.getElementById('m-play').textContent = '⏸'; }
-  else { videoEl.pause(); document.getElementById('m-play').textContent = '▶'; }
-});
-document.getElementById('m-mute').addEventListener('click', () => {
-  videoEl.muted = !videoEl.muted;
-  document.getElementById('m-mute').textContent = videoEl.muted ? '🔇' : '🔊';
-});
-document.getElementById('m-vol').addEventListener('input', e => { videoEl.volume = +e.target.value; });
-document.getElementById('m-pip').addEventListener('click', () => { if(document.pictureInPictureEnabled) videoEl.requestPictureInPicture(); });
-document.getElementById('m-fs').addEventListener('click',  () => { if(videoEl.requestFullscreen) videoEl.requestFullscreen(); });
+/* ── Groups ─────────────────────────────────────────────────────── */
+function buildGroups() {
+  const counts = {};
+  allChannels.forEach(ch => {
+    counts[ch.group] = (counts[ch.group] || 0) + 1;
+  });
+  const groups = Object.entries(counts).sort((a, b) => b[1] - a[1]);
 
-// ── Launchers ─────────────────────────────────────────────────────────────────
-function launchVLC(url, name) {
-  const ua = navigator.userAgent;
-  const isMobile = /Android|iPhone|iPad/i.test(ua);
-  if (isMobile) {
-    window.location.href = 'vlc://' + url;
-    setTimeout(() => toast('🟠 Abriendo en VLC…'), 400);
+  groupPills.innerHTML = '';
+  const all = makePill('TODOS', allChannels.length);
+  groupPills.appendChild(all);
+  groups.forEach(([g, c]) => groupPills.appendChild(makePill(g, c)));
+}
+
+function makePill(label, count) {
+  const p = document.createElement('button');
+  p.className = 'pill' + (label === activeGroup ? ' active' : '');
+  p.textContent = `${label} (${count})`;
+  p.onclick = () => setGroup(label);
+  return p;
+}
+
+function setGroup(group) {
+  activeGroup = group;
+  document.querySelectorAll('.pill').forEach(p => {
+    p.classList.toggle('active', p.textContent.startsWith(group + ' ') || p.textContent.startsWith(group + '('));
+  });
+  const q = $('search-input').value.trim().toLowerCase();
+  filteredChs = allChannels
+    .filter(ch => (group === 'TODOS' || ch.group === group))
+    .filter(ch => !q || ch.name.toLowerCase().includes(q));
+  pageOffset = 0;
+  renderChannels();
+}
+
+/* ── Render channels ────────────────────────────────────────────── */
+function renderChannels() {
+  channelList.innerHTML = '';
+  const slice = filteredChs.slice(0, pageOffset + PAGE_SIZE);
+  slice.forEach(ch => channelList.appendChild(makeCard(ch)));
+  pageOffset = slice.length;
+  const wrap = $('load-more-wrap');
+  wrap.style.display = filteredChs.length > pageOffset ? '' : 'none';
+  statusEl.textContent = `${filteredChs.length} canales${activeGroup !== 'TODOS' ? ' en ' + activeGroup : ''}`;
+}
+
+function loadMore() {
+  const from = pageOffset;
+  const to   = pageOffset + PAGE_SIZE;
+  filteredChs.slice(from, to).forEach(ch => channelList.appendChild(makeCard(ch)));
+  pageOffset = to;
+  const wrap = $('load-more-wrap');
+  wrap.style.display = filteredChs.length > pageOffset ? '' : 'none';
+}
+
+function makeCard(ch) {
+  const div = document.createElement('div');
+  div.className = 'ch-card';
+  div.dataset.url = ch.url;
+
+  const logo = ch.logo
+    ? `<img class="ch-logo" src="${ch.logo}" alt="" loading="lazy" onerror="this.style.display='none';this.nextElementSibling.style.display='flex'">`
+      + `<div class="ch-logo-fallback" style="display:none">📺</div>`
+    : `<div class="ch-logo-fallback">📺</div>`;
+
+  const qBadge = `<span class="badge badge-${ch.qual.toLowerCase()}">${ch.qual}</span>`;
+  const aceBadge = ch.type === 'ace' ? `<span class="badge badge-ace">ACE</span>` : '';
+
+  div.innerHTML = `
+    ${logo}
+    <div class="ch-info">
+      <div class="ch-name">${escHtml(ch.name)}</div>
+      <div class="ch-meta">${qBadge}${aceBadge}</div>
+    </div>
+    <div class="ch-options">
+      <button class="ch-btn" title="Ver aquí" onclick="event.stopPropagation();playDirect(allChannels.find(c=>c.url==='${escAttr(ch.url)}'))">▶</button>
+      <button class="ch-btn" title="Más opciones" onclick="event.stopPropagation();openModal(allChannels.find(c=>c.url==='${escAttr(ch.url)}'))">⋮</button>
+    </div>
+  `;
+  div.addEventListener('click', () => openModal(ch));
+  return div;
+}
+
+function clearChannels() {
+  allChannels = []; filteredChs = []; activeGroup = 'TODOS'; pageOffset = 0;
+  channelList.innerHTML = '';
+  groupPills.innerHTML = '';
+  $('load-more-wrap').style.display = 'none';
+  statusEl.textContent = 'Cargando…';
+}
+
+/* ── Search ─────────────────────────────────────────────────────── */
+$('search-input').addEventListener('input', e => {
+  clearTimeout(searchTimer);
+  searchTimer = setTimeout(() => {
+    const q = e.target.value.trim().toLowerCase();
+    if (activeGroup === 'TODOS') {
+      filteredChs = allChannels.filter(ch => !q || ch.name.toLowerCase().includes(q));
+    } else {
+      filteredChs = allChannels.filter(ch => ch.group === activeGroup && (!q || ch.name.toLowerCase().includes(q)));
+    }
+    pageOffset = 0;
+    renderChannels();
+  }, 280);
+});
+
+/* ── Modal ──────────────────────────────────────────────────────── */
+let modalChannel = null;
+
+function openModal(ch) {
+  modalChannel = ch;
+  $('modal-logo').src  = ch.logo || '';
+  $('modal-logo').style.display = ch.logo ? '' : 'none';
+  $('modal-title').textContent = ch.name;
+  $('modal-meta').textContent  = `${ch.group} · ${ch.qual}${ch.type === 'ace' ? ' · AceStream' : ''}`;
+
+  // Adapt buttons per platform and stream type
+  const aceBtn  = $('modal-ace-btn');
+  const webBtn  = $('modal-web-btn');
+  const aceNote = $('modal-ace-note');
+
+  // VLC hint
+  if (IS_IOS)     $('vlc-hint').textContent = 'Abre la app VLC para iOS';
+  else if (IS_ANDROID) $('vlc-hint').textContent = 'Abre la app VLC para Android';
+  else            $('vlc-hint').textContent = 'VLC en tu ordenador';
+
+  // AceStream button
+  if (ch.type === 'ace') {
+    aceBtn.style.display = '';
+    aceNote.style.display = '';
+    if (IS_IOS) {
+      aceBtn.style.display = 'none';
+      aceNote.textContent = '⚠️ AceStream no tiene cliente oficial para iOS. Usa "Ver aquí" si el canal tiene stream HTTP alternativo.';
+    } else if (IS_ANDROID) {
+      aceNote.textContent = '📱 Necesitas la app "Ace Stream Media" de la Play Store instalada.';
+      $('ace-hint').textContent = 'Abre Ace Stream Media';
+    } else {
+      // Desktop
+      if (aceAvailable) {
+        aceNote.textContent = '✅ AceStream Engine detectado. "Ver aquí" usará el engine automáticamente.';
+      } else {
+        aceNote.textContent = '🖥️ Para reproducir AceStream, instala el AceStream Engine y árrancalo. Luego usa "Ver aquí" o "Abrir en AceStream".';
+      }
+    }
+  } else {
+    aceBtn.style.display = 'none';
+    aceNote.style.display = 'none';
+  }
+
+  // Web button: only for http channels
+  webBtn.style.display = ch.type === 'ace' ? 'none' : '';
+
+  modalBackdrop.classList.add('open');
+  document.body.style.overflow = 'hidden';
+}
+
+function closeModal(e) {
+  if (e && e.target !== modalBackdrop) return;
+  modalBackdrop.classList.remove('open');
+  document.body.style.overflow = '';
+  modalChannel = null;
+}
+
+function modalPlay(mode) {
+  closeModal(null);
+  if (!modalChannel) return;
+  if (mode === 'browser') playDirect(modalChannel);
+  else if (mode === 'vlc') launchVLC(modalChannel);
+  else if (mode === 'ace') launchAce(modalChannel);
+  else if (mode === 'web') window.open(modalChannel.url, '_blank');
+}
+
+/* ── Player (inline) ────────────────────────────────────────────── */
+let retryChannel = null;
+
+function playDirect(ch) {
+  if (!ch) return;
+  retryChannel = ch;
+  currentCh = ch;
+  updateNowPlaying(ch);
+  highlightCard(ch);
+
+  // AceStream via local engine
+  if (ch.type === 'ace') {
+    const hash = ch.url.replace('acestream://', '').split('?')[0];
+    if (aceAvailable) {
+      const httpUrl = `http://127.0.0.1:6878/ace/getstream?id=${hash}`;
+      startHLS(httpUrl);
+    } else {
+      showError('AceStream Engine no detectado en 127.0.0.1:6878.\nInstala el engine y arráncalo para reproducir este canal.');
+      toast('AceStream Engine no disponible', 'warn');
+    }
     return;
   }
-  // Desktop: .strm file → VLC lo abre directamente con doble clic
-  const blob = new Blob([url], { type: 'text/plain' });
+
+  startHLS(ch.url);
+}
+
+function startHLS(url) {
+  playerOverlay.classList.add('hidden');
+  playerError.classList.add('hidden');
+  playerSpinner.classList.remove('hidden');
+
+  if (hlsInstance) { hlsInstance.destroy(); hlsInstance = null; }
+  videoEl.src = '';
+
+  const isHLS = url.includes('.m3u8') || url.includes('m3u8') || !url.match(/\.(mp4|ts|mkv)($|\?)/i);
+
+  if (isHLS && Hls.isSupported()) {
+    hlsInstance = new Hls({
+      maxBufferLength: 30,
+      maxMaxBufferLength: 60,
+      enableWorker: true,
+      lowLatencyMode: true,
+    });
+    hlsInstance.loadSource(url);
+    hlsInstance.attachMedia(videoEl);
+    hlsInstance.on(Hls.Events.MANIFEST_PARSED, () => {
+      playerSpinner.classList.add('hidden');
+      videoEl.play().catch(() => {});
+    });
+    hlsInstance.on(Hls.Events.ERROR, (_, data) => {
+      if (data.fatal) {
+        switch (data.type) {
+          case Hls.ErrorTypes.NETWORK_ERROR:
+            hlsInstance.startLoad(); break;
+          case Hls.ErrorTypes.MEDIA_ERROR:
+            hlsInstance.recoverMediaError(); break;
+          default:
+            showError('Error de stream. El canal puede estar offline.');
+        }
+      }
+    });
+  } else if (videoEl.canPlayType('application/vnd.apple.mpegurl')) {
+    // Safari nativo
+    videoEl.src = url;
+    videoEl.addEventListener('loadedmetadata', () => {
+      playerSpinner.classList.add('hidden');
+      videoEl.play().catch(() => {});
+    }, { once: true });
+    videoEl.addEventListener('error', () => showError('No se pudo cargar el stream'), { once: true });
+  } else {
+    // Direct src (MP4, TS…)
+    videoEl.src = url;
+    videoEl.addEventListener('canplay', () => {
+      playerSpinner.classList.add('hidden');
+      videoEl.play().catch(() => {});
+    }, { once: true });
+    videoEl.addEventListener('error', () => showError('No se pudo cargar el stream'), { once: true });
+  }
+}
+
+function showError(msg) {
+  playerSpinner.classList.add('hidden');
+  playerError.classList.remove('hidden');
+  playerErrorTxt.textContent = msg;
+}
+
+function retryPlay() {
+  if (retryChannel) {
+    playerError.classList.add('hidden');
+    playDirect(retryChannel);
+  }
+}
+
+videoEl.addEventListener('waiting', () => playerSpinner.classList.remove('hidden'));
+videoEl.addEventListener('playing', () => {
+  playerSpinner.classList.add('hidden');
+  playerError.classList.add('hidden');
+  playerOverlay.classList.add('hidden');
+});
+videoEl.addEventListener('error', () => {
+  if (videoEl.src) showError('Error de reproducción. El canal puede estar offline o requerir VLC/AceStream.');
+});
+
+/* ── Launch VLC ─────────────────────────────────────────────────── */
+function launchVLC(ch) {
+  const url = ch.url;
+
+  if (IS_IOS) {
+    // VLC iOS maneja vlc:// nativamente
+    window.location.href = 'vlc://' + url;
+    toast('Abriendo VLC…', 'info');
+    return;
+  }
+
+  if (IS_ANDROID) {
+    // Intent URL para Android — abre VLC sin descargar
+    const scheme  = url.startsWith('https') ? 'https' : 'http';
+    const bareUrl = url.replace(/^https?:\/\//, '');
+    window.location.href = `intent://${bareUrl}#Intent;package=org.videolan.vlc;scheme=${scheme};S.title=${encodeURIComponent(ch.name)};end`;
+    toast('Abriendo VLC…', 'info');
+    return;
+  }
+
+  // Desktop: usa vlc:// scheme — VLC lo registra al instalarse
+  // NO hacemos window.location.href = url (eso descarga el stream)
   const a = document.createElement('a');
-  const objUrl = URL.createObjectURL(blob);
-  a.href = objUrl;
-  a.download = (name || 'stream') + '.strm';
+  a.href = 'vlc://' + url;
   document.body.appendChild(a);
   a.click();
   document.body.removeChild(a);
-  setTimeout(() => URL.revokeObjectURL(objUrl), 1000);
-  toast('🟠 Archivo .strm descargado — ábrelo con doble clic en VLC');
-}
-function launchAce(hash) {
-  window.location.href = `acestream://${hash}`;
-  setTimeout(() => toast('🟣 Acestream: asegúrate de tener el motor instalado'), 800);
-}
-function openWeb(url) { window.open(url, '_blank'); toast('🌐 Abriendo en nueva pestaña…'); }
-function copyUrl(url) {
-  navigator.clipboard.writeText(url).then(() => toast('📋 URL copiada — pégala en VLC: Media → Abrir URL'));
+
+  toast('Lanzando VLC… (si no abre, instala VLC o usa "Ver aquí")', 'info');
 }
 
-// ── Toast ─────────────────────────────────────────────────────────────────────
-function toast(msg, ms=3200) {
-  const el = document.getElementById('toast');
-  el.textContent=msg; el.style.display='block';
-  clearTimeout(el._t); el._t=setTimeout(()=>el.style.display='none', ms);
-}
+/* ── Launch AceStream ───────────────────────────────────────────── */
+function launchAce(ch) {
+  const hash = ch.url.replace('acestream://', '').split('?')[0];
 
-// ── Close modal ───────────────────────────────────────────────────────────────
-document.getElementById('m-close').addEventListener('click', ()=>{ stopPlayer(); document.getElementById('overlay').classList.remove('open'); });
-document.getElementById('overlay').addEventListener('click', e=>{ if(e.target===e.currentTarget){ stopPlayer(); e.currentTarget.classList.remove('open'); }});
+  if (IS_ANDROID) {
+    // Ace Stream Media app registra acestream:// en Android
+    window.location.href = 'acestream://' + hash;
+    toast('Abriendo AceStream…', 'info');
+    return;
+  }
 
-// ── Load M3U ──────────────────────────────────────────────────────────────────
-async function loadM3U(url) {
-  if (!url) return;
-  setLoading(true, 'Descargando lista…');
-  try {
-    let r = await fetch(url).catch(() => null);
-    if (!r || !r.ok) {
-      // CORS fallback via allorigins proxy
-      const proxy = 'https://api.allorigins.win/raw?url=' + encodeURIComponent(url);
-      r = await fetch(proxy);
-    }
-    if (!r.ok) throw new Error(`HTTP ${r.status}`);
-    const text = await r.text();
-    setLoading(true, 'Procesando canales…');
-    const raw = await parseViaWorker(text);
-    channels    = groupChannels(raw);
-    activeGroup = 'TODOS';
-    searchQ     = '';
-    pageOffset  = 0;
-    document.getElementById('search').value = '';
-    renderGroups();
-    renderContent();
-    toast(`✅ ${raw.length} streams → ${channels.length} canales`);
-  } catch(e) {
-    toast('❌ ' + e.message);
-  } finally {
-    setLoading(false);
+  if (IS_IOS) {
+    toast('AceStream no está disponible en iOS', 'warn');
+    return;
+  }
+
+  // Desktop: intentar via engine local o deep link
+  if (aceAvailable) {
+    playDirect(ch); // usa el engine HTTP
+  } else {
+    window.location.href = 'acestream://' + hash;
+    toast('Lanzando AceStream… (asegúrate de que el engine está activo)', 'info');
   }
 }
 
-function setLoading(on, msg='') {
-  const el = document.getElementById('loading');
-  el.classList.toggle('on', on);
-  if (msg) document.getElementById('load-msg').textContent = msg;
+/* ── AceStream engine detection ─────────────────────────────────── */
+async function detectAceEngine() {
+  try {
+    const res = await fetch('http://127.0.0.1:6878/webui/api/service?method=get_version', {
+      signal: AbortSignal.timeout(1500)
+    });
+    if (res.ok) {
+      aceAvailable = true;
+      toast('✅ AceStream Engine detectado', 'ok');
+    }
+  } catch(e) {
+    aceAvailable = false;
+  }
 }
 
-// ── Playlist selector ─────────────────────────────────────────────────────────
-const FALLBACK_LISTS = [
-  { name:'— Seleccionar lista —', description:'', url:'' },
-  { name:'Mi lista ES 🇪🇸', description:'DAZN · LaLiga · Champions · TDT', url:'https://raw.githubusercontent.com/jesusparrat/effective-funicular/refs/heads/main/effective-funicular.m3u' },
-  { name:'iptv-org España 🇪🇸', description:'~150 canales públicos', url:'https://iptv-org.github.io/iptv/countries/es.m3u' },
-  { name:'iptv-org Deportes 🏆', description:'290+ canales deportivos', url:'https://iptv-org.github.io/iptv/categories/sports.m3u' },
-  { name:'iptv-org Global 🌐', description:'20,000+ canales', url:'https://iptv-org.github.io/iptv/index.m3u' },
-];
+/* ── Now playing ────────────────────────────────────────────────── */
+function updateNowPlaying(ch) {
+  $('now-playing').classList.remove('empty');
+  $('np-name').textContent = ch.name;
+  $('np-sub').textContent  = `${ch.group} · ${ch.qual}${ch.type === 'ace' ? ' · AceStream' : ''}`;
+  const logo    = $('np-logo');
+  const logoFb  = $('np-logo-fallback');
+  if (ch.logo) {
+    logo.src = ch.logo;
+    logo.style.display = '';
+    logoFb.style.display = 'none';
+    logo.onerror = () => { logo.style.display = 'none'; logoFb.style.display = ''; };
+  } else {
+    logo.style.display = 'none';
+    logoFb.style.display = '';
+  }
+  // Info panel
+  $('info-empty').style.display = 'none';
+  const ic = $('info-content');
+  ic.style.display = '';
+  ic.innerHTML = `
+    <h3 style="margin-bottom:8px">${escHtml(ch.name)}</h3>
+    <div style="color:var(--text2);font-size:.85rem;margin-bottom:16px">
+      ${ch.group} &nbsp;·&nbsp; ${ch.qual} &nbsp;·&nbsp; ${ch.type === 'ace' ? 'AceStream P2P' : 'HTTP/HLS'}
+    </div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button class="btn btn-primary" onclick="playDirect(currentCh)">▶ Ver aquí</button>
+      <button class="btn btn-orange" onclick="launchVLC(currentCh)">📺 VLC</button>
+      ${ch.type === 'ace' && !IS_IOS ? `<button class="btn btn-surface" style="border-color:var(--purple)" onclick="launchAce(currentCh)">🔵 AceStream</button>` : ''}
+      ${ch.type !== 'ace' ? `<button class="btn btn-surface" onclick="window.open(currentCh.url,'_blank')">🌐 Enlace</button>` : ''}
+    </div>
+  `;
+}
 
-async function loadPlaylists() {
-  const sel = document.getElementById('pl-sel');
-  let lists = FALLBACK_LISTS;
-  try {
-    const r = await fetch('./playlists.json');
-    if (r.ok) {
-      const data = await r.json();
-      lists = [{ name:'— Seleccionar lista —', description:'', url:'' }, ...data];
-    }
-  } catch(_) {}
-  sel.innerHTML = lists.map((p,i)=>`<option value="${p.url}" title="${p.description}">${p.name}</option>`).join('');
-  sel.addEventListener('change', () => {
-    const url = sel.value;
-    if (!url) return;
-    document.getElementById('pl-url').value = '';
-    loadM3U(url);
+function highlightCard(ch) {
+  document.querySelectorAll('.ch-card').forEach(el => {
+    el.classList.toggle('active', el.dataset.url === ch.url);
   });
 }
 
-document.getElementById('load-btn').addEventListener('click', () => {
-  const url = document.getElementById('pl-url').value.trim() || document.getElementById('pl-sel').value;
-  loadM3U(url);
-});
-document.getElementById('pl-url').addEventListener('keydown', e => { if(e.key==='Enter') document.getElementById('load-btn').click(); });
-
-// ── Debounced search ──────────────────────────────────────────────────────────
-let searchTimer = null;
-document.getElementById('search').addEventListener('input', e => {
-  clearTimeout(searchTimer);
-  searchTimer = setTimeout(() => {
-    searchQ = e.target.value.trim();
-    pageOffset = 0;
-    if (searchQ && activeGroup !== 'TODOS') { activeGroup = 'TODOS'; renderGroups(); }
-    else if (!searchQ) renderGroups();
-    renderContent();
-  }, 300);
-});
-
-// ── PWA Service Worker ────────────────────────────────────────────────────────
-if ('serviceWorker' in navigator) {
-  navigator.serviceWorker.register('./sw.js', { scope: './' }).catch(()=>{});
+/* ── Controls ───────────────────────────────────────────────────── */
+function toggleFullscreen() {
+  if (!document.fullscreenElement) {
+    $('player-wrap').requestFullscreen().catch(() => {});
+  } else {
+    document.exitFullscreen();
+  }
 }
 
-// ── Init ──────────────────────────────────────────────────────────────────────
-(async () => {
-  await loadPlaylists();
-})();
+function toggleTheater() {
+  theaterMode = !theaterMode;
+  $('player-wrap').classList.toggle('theater', theaterMode);
+}
+
+function toggleMute() {
+  videoEl.muted = !videoEl.muted;
+  $('mute-btn').textContent = videoEl.muted ? '🔇' : '🔊';
+}
+
+/* ── Loading inline indicator ──────────────────────────────────── */
+function setLoadingInline(on) {
+  statusEl.textContent = on ? '⏳ Cargando…' : '';
+}
+
+/* ── Toast ──────────────────────────────────────────────────────── */
+function toast(msg, type = 'info', duration = 3500) {
+  const el = document.createElement('div');
+  el.className = `toast ${type}`;
+  const icons = { info: 'ℹ️', ok: '✅', warn: '⚠️', error: '❌' };
+  el.innerHTML = `<span>${icons[type] || 'ℹ️'}</span><span>${msg}</span>`;
+  $('toast-container').appendChild(el);
+  setTimeout(() => el.remove(), duration);
+}
+
+/* ── Keyboard shortcuts ─────────────────────────────────────────── */
+function onKey(e) {
+  if (e.target.tagName === 'INPUT') return;
+  switch(e.key) {
+    case ' ':  case 'k': videoEl.paused ? videoEl.play() : videoEl.pause(); e.preventDefault(); break;
+    case 'f':  toggleFullscreen(); break;
+    case 'm':  toggleMute(); break;
+    case 't':  toggleTheater(); break;
+    case 'Escape': closeModal(null); break;
+    case 'ArrowUp':   videoEl.volume = Math.min(1, videoEl.volume + .1); break;
+    case 'ArrowDown': videoEl.volume = Math.max(0, videoEl.volume - .1); break;
+  }
+}
+
+/* ── Utils ──────────────────────────────────────────────────────── */
+function escHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+function escAttr(s) {
+  return s.replace(/'/g, "\\'").replace(/"/g, '\\"');
+}
 </script>
 </body>
 </html>
