@@ -9,7 +9,7 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <link rel="manifest" href="manifest.json">
   <link rel="stylesheet" href="styles.css">
-  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js" crossorigin="anonymous"></script>
   <script src="app.js" defer></script>
 </head>
 <body>
@@ -17,9 +17,7 @@
 <div id="app">
   <header>
     <div class="logo"><span>IPTV</span> Player</div>
-    <select id="playlist-select" title="Select Playlist">
-      <option value="">Select playlist...</option>
-    </select>
+    <button class="btn btn-surface" id="btn-open-playlists">&#128203; Playlists</button>
     <form id="url-form" onsubmit="return false">
       <input id="url-input" type="url" placeholder="https://example.com/list.m3u" autocomplete="off" spellcheck="false">
       <button class="btn btn-primary" id="btn-load-url">Load</button>
@@ -33,12 +31,10 @@
       </div>
       <div id="group-pills"></div>
       <div id="alpha-pills"></div>
-      
       <div id="channel-scroll-wrap">
         <div id="channel-list"></div>
         <div id="scroll-sentinel"></div>
       </div>
-      
       <div id="sidebar-status">Load a playlist to start</div>
     </aside>
 
@@ -46,12 +42,12 @@
       <div id="player-wrap">
         <video id="video-el" controls playsinline webkit-playsinline></video>
         <div id="player-overlay">
-          <div class="big-icon">📺</div>
+          <div class="big-icon">&#128250;</div>
           <div>Select a channel to play</div>
         </div>
         <div id="player-spinner" class="hidden"><div class="spinner"></div></div>
         <div id="player-error" class="hidden">
-          <div class="err-icon">⚠️</div>
+          <div class="err-icon">&#9888;&#65039;</div>
           <div class="err-text" id="player-error-text">Stream offline</div>
           <button class="btn btn-surface" style="margin-top:8px;" id="btn-retry">Retry</button>
         </div>
@@ -59,34 +55,47 @@
 
       <div id="now-playing" class="empty">
         <img id="np-logo" src="" alt="" style="display:none">
-        <div id="np-logo-fallback">📺</div>
+        <div id="np-logo-fallback">&#128250;</div>
         <div id="np-info">
           <div id="np-name">No active channel</div>
           <div id="np-sub">Select a channel</div>
         </div>
         <div style="display:flex;gap:6px">
-          <button class="btn btn-icon btn-surface" id="btn-fullscreen">⛶</button>
+          <button class="btn btn-icon btn-surface" id="btn-fullscreen">&#9974;</button>
         </div>
       </div>
     </main>
   </div>
 </div>
 
+<!-- Playlist Picker — TV-friendly overlay -->
+<div id="playlist-overlay">
+  <div id="playlist-panel">
+    <div id="playlist-panel-header">
+      <span>Choose a Playlist</span>
+      <button class="btn btn-surface btn-icon" id="btn-close-playlists">&#10005;</button>
+    </div>
+    <div id="playlist-grid"></div>
+  </div>
+</div>
+
+<!-- Channel detail modal -->
 <div id="modal-backdrop">
   <div id="modal">
     <div id="modal-header">
       <img id="modal-logo" class="modal-logo-img" src="" alt="" style="display:none">
-      <div id="modal-logo-fb" class="modal-logo-fb">📺</div>
+      <div id="modal-logo-fb" class="modal-logo-fb">&#128250;</div>
       <div style="flex:1;min-width:0">
         <div id="modal-title" style="font-weight:bold"></div>
-        <div id="modal-meta" style="font-size:0.8rem;color:var(--text2);margin-top:3px"></div>
+        <div id="modal-meta" style="font-size:0.8rem;color:var(--text2)"></div>
       </div>
-      <button class="btn btn-surface btn-icon" id="btn-close-modal">✕</button>
+      <button class="btn btn-surface btn-icon" id="btn-close-modal">&#10005;</button>
     </div>
     <div id="modal-body"></div>
   </div>
 </div>
 
 <div id="toast-container"></div>
+
 </body>
 </html>
