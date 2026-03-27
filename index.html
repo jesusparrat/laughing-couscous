@@ -1,13 +1,15 @@
 <!DOCTYPE html>
-<html lang="en">
+<html lang="es">
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>IPTV Player</title>
   <meta name="theme-color" content="#6c63ff">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <title>IPTV Player</title>
   <link rel="manifest" href="manifest.json">
+  <link rel="apple-touch-icon" href="https://raw.githubusercontent.com/twitter/twemoji/master/assets/72x72/1f4fa.png">
   <link rel="stylesheet" href="styles.css">
   <script src="https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js" crossorigin="anonymous"></script>
   <script src="app.js" defer></script>
@@ -16,18 +18,18 @@
 
 <div id="app">
   <header>
-    <div class="logo"><span>IPTV</span> Player</div>
-    <button class="btn btn-surface" id="btn-open-playlists">&#128203; Playlists</button>
+    <div class="logo">📺 <span>IPTV</span> Player</div>
+    <button class="btn btn-surface" id="btn-open-playlists">📋 Listas</button>
     <form id="url-form" onsubmit="return false">
-      <input id="url-input" type="url" placeholder="https://example.com/list.m3u" autocomplete="off" spellcheck="false">
-      <button class="btn btn-primary" id="btn-load-url">Load</button>
+      <input id="url-input" type="url" placeholder="https://ejemplo.com/lista.m3u" autocomplete="off" spellcheck="false">
+      <button class="btn btn-primary" id="btn-load-url">Cargar</button>
     </form>
   </header>
 
   <div id="body">
     <aside id="sidebar">
       <div id="sidebar-top">
-        <input id="search-input" type="search" placeholder="Search..." autocomplete="off">
+        <input id="search-input" type="search" placeholder="Buscar canal…" autocomplete="off">
       </div>
       <div id="group-pills"></div>
       <div id="alpha-pills"></div>
@@ -35,63 +37,71 @@
         <div id="channel-list"></div>
         <div id="scroll-sentinel"></div>
       </div>
-      <div id="sidebar-status">Load a playlist to start</div>
+      <div id="sidebar-status">Carga una lista para empezar</div>
     </aside>
 
     <main id="main">
       <div id="player-wrap">
-        <video id="video-el" controls playsinline webkit-playsinline></video>
+        <video id="video-el" controls playsinline webkit-playsinline crossorigin="anonymous"></video>
         <div id="player-overlay">
-          <div class="big-icon">&#128250;</div>
-          <div>Select a channel to play</div>
+          <div class="big-icon">📡</div>
+          <div>Selecciona un canal para reproducir</div>
         </div>
         <div id="player-spinner" class="hidden"><div class="spinner"></div></div>
         <div id="player-error" class="hidden">
-          <div class="err-icon">&#9888;&#65039;</div>
-          <div class="err-text" id="player-error-text">Stream offline</div>
-          <button class="btn btn-surface" style="margin-top:8px;" id="btn-retry">Retry</button>
+          <div class="err-icon">⚠️</div>
+          <div class="err-text" id="player-error-text">Stream no disponible</div>
+          <button class="btn btn-surface" style="margin-top:8px;" id="btn-retry">Reintentar</button>
         </div>
       </div>
 
       <div id="now-playing" class="empty">
         <img id="np-logo" src="" alt="" style="display:none">
-        <div id="np-logo-fallback">&#128250;</div>
+        <div id="np-logo-fallback">📺</div>
         <div id="np-info">
-          <div id="np-name">No active channel</div>
-          <div id="np-sub">Select a channel</div>
+          <div id="np-name">Sin canal activo</div>
+          <div id="np-sub">Selecciona un canal</div>
         </div>
-        <div style="display:flex;gap:6px">
-          <button class="btn btn-icon btn-surface" id="btn-fullscreen">&#9974;</button>
+        <div style="display:flex;gap:6px;align-items:center;">
+          <button class="btn btn-icon btn-surface" id="btn-pip" title="Picture in Picture">⧉</button>
+          <button class="btn btn-icon btn-surface" id="btn-fullscreen" title="Pantalla completa">⛶</button>
         </div>
       </div>
     </main>
   </div>
 </div>
 
-<!-- Playlist Picker — TV-friendly overlay -->
+<!-- Selector de listas — overlay estilo TV -->
 <div id="playlist-overlay">
   <div id="playlist-panel">
     <div id="playlist-panel-header">
-      <span>Choose a Playlist</span>
-      <button class="btn btn-surface btn-icon" id="btn-close-playlists">&#10005;</button>
+      <span>Selecciona una lista</span>
+      <button class="btn btn-surface btn-icon" id="btn-close-playlists">✕</button>
     </div>
     <div id="playlist-grid"></div>
+    <div id="playlist-panel-footer">
+      <input id="playlist-url-input" type="url" placeholder="O pega una URL de M3U…">
+      <button class="btn btn-primary" id="btn-load-playlist-url">Cargar URL</button>
+    </div>
   </div>
 </div>
 
-<!-- Channel detail modal -->
+<!-- Modal de detalle de canal -->
 <div id="modal-backdrop">
   <div id="modal">
     <div id="modal-header">
       <img id="modal-logo" class="modal-logo-img" src="" alt="" style="display:none">
-      <div id="modal-logo-fb" class="modal-logo-fb">&#128250;</div>
+      <div id="modal-logo-fb" class="modal-logo-fb">📺</div>
       <div style="flex:1;min-width:0">
         <div id="modal-title" style="font-weight:bold"></div>
         <div id="modal-meta" style="font-size:0.8rem;color:var(--text2)"></div>
       </div>
-      <button class="btn btn-surface btn-icon" id="btn-close-modal">&#10005;</button>
+      <button class="btn btn-surface btn-icon" id="btn-close-modal">✕</button>
     </div>
+    <!-- Streams: se renderizan desde app.js con botones ▶ Ver / 🟠 VLC / 🟣 Ace / 🌐 Web / 📋 Copiar -->
     <div id="modal-body"></div>
+    <!-- Pista de plataforma (acestream, mixed-content, etc.) -->
+    <div id="modal-hint"></div>
   </div>
 </div>
 
