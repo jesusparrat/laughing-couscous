@@ -1,12 +1,13 @@
 {
   "name": "IPTV Player",
   "short_name": "IPTVPlayer",
-  "description": "Multi-platform IPTV Player with M3U support",
+  "description": "Reproductor IPTV multiplataforma con soporte M3U",
   "start_url": "./index.html",
   "scope": "./",
   "display": "standalone",
   "background_color": "#0f0f13",
   "theme_color": "#6c63ff",
+  "lang": "es",
   "icons": [
     {
       "src": "data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 512 512'><rect width='512' height='512' rx='80' fill='%236c63ff'/><rect x='76' y='110' width='360' height='250' rx='18' fill='none' stroke='white' stroke-width='26'/><line x1='196' y1='384' x2='316' y2='384' stroke='white' stroke-width='22' stroke-linecap='round'/><line x1='256' y1='360' x2='256' y2='384' stroke='white' stroke-width='22' stroke-linecap='round'/><polygon points='186,160 186,280 322,220' fill='white'/></svg>",

@@ -1,7 +1,15 @@
-// Bump CACHE_NAME on every deploy to force cache refresh in all clients
-const CACHE_NAME = 'iptv-v2';
-const NETWORK_FIRST = ['playlists.json'];   // always fetch fresh; fallback to cache if offline
-const ASSETS = ['/', './index.html', './app.js', './styles.css', './worker.js', './manifest.json'];
+// Bump version on every deploy to force cache refresh
+const CACHE_NAME = 'iptv-v3';
+const NETWORK_FIRST = ['playlists.json'];
+const ASSETS = [
+  '/',
+  './index.html',
+  './app.js',
+  './styles.css',
+  './worker.js',
+  './manifest.json',
+  'https://cdn.jsdelivr.net/npm/hls.js@1.5.15/dist/hls.min.js'
+];
 
 self.addEventListener('install', e => {
   e.waitUntil(caches.open(CACHE_NAME).then(c => c.addAll(ASSETS)));
@@ -19,8 +27,17 @@ self.addEventListener('activate', e => {
 
 self.addEventListener('fetch', e => {
   if (e.request.method !== 'GET') return;
-  const pathname = new URL(e.request.url).pathname;
-  const isNetworkFirst = NETWORK_FIRST.some(f => pathname.endsWith(f));
+
+  const url = new URL(e.request.url);
+
+  // Never cache M3U playlists or external streams
+  if (url.hostname !== self.location.hostname &&
+      !url.href.includes('cdn.jsdelivr.net') &&
+      !url.href.includes('playlists.json')) {
+    return;
+  }
+
+  const isNetworkFirst = NETWORK_FIRST.some(f => url.pathname.endsWith(f));
 
   if (isNetworkFirst) {
     e.respondWith(

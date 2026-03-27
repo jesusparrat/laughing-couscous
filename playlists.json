@@ -1,26 +1,26 @@
 [
   {
-    "name": "Mi lista Personalizada",
+    "name": "Mi lista - GitHub",
     "description": "DAZN · LaLiga · Champions · TDT · Eurosport",
     "url": "https://raw.githubusercontent.com/jesusparrat/effective-funicular/refs/heads/main/effective-funicular.m3u"
   },
   {
-    "name": "iptv-org España 🇪🇸",
+    "name": "🇪🇸 iptv-org España",
     "description": "~150 canales públicos nacionales",
     "url": "https://iptv-org.github.io/iptv/countries/es.m3u"
   },
   {
-    "name": "iptv-org Deportes 🏆",
+    "name": "🏆 iptv-org Deportes",
     "description": "290+ canales deportivos en abierto",
     "url": "https://iptv-org.github.io/iptv/categories/sports.m3u"
   },
   {
-    "name": "iptv-org Europa 🌍",
-    "description": "Canales públicos europeos combinados (ES+DE+FR+IT+PT)",
+    "name": "🌍 iptv-org Español",
+    "description": "Canales en español (ES · MX · AR · CO…)",
     "url": "https://iptv-org.github.io/iptv/languages/spa.m3u"
   },
   {
-    "name": "iptv-org Global 🌐",
+    "name": "🌐 iptv-org Global",
     "description": "20,000+ canales — stress test",
     "url": "https://iptv-org.github.io/iptv/index.m3u"
   }
